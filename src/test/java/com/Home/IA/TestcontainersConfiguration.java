@@ -1,4 +1,4 @@
-package com.Home.IA;
+package com.home.ia;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
