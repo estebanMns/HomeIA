@@ -1,4 +1,12 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/IaApplication.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/port/in/AutomationResult.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/port/in/SwitchOffVacantRoomsUseCase.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/port/out/DeviceCommandPort.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/port/out/DeviceRepositoryPort.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/port/out/DomainEventPublisherPort.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/port/out/OccupancyPredictionPort.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/service/SwitchOffVacantRoomsService.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/event/DevicesSwitchedOffAutomaticallyEvent.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/event/DomainEvent.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/event/EnergyLeakSuspectedEvent.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/event/ExcessiveConsumptionEvent.java
@@ -34,3 +42,9 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/policy/ExcessiveConsumptionPolicy.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/policy/OccupancyPolicy.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/policy/OutletProtectionPolicy.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/controller/DeviceController.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/dto/DeviceDTO.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/entity/AlertEntity.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/entity/DeviceEntity.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/entity/RoomEntity.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/repository/DeviceJpaRepository.java
