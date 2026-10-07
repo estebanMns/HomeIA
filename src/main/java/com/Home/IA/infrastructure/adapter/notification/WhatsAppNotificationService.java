@@ -7,13 +7,21 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class WhatsAppNotificationService {
+
+    private final RestTemplate restTemplate;
+
+    @Value("${whatsapp.enabled:false}")
+    private boolean whatsappEnabled;
 
     @Value("${whatsapp.api.url:https://api.whatsapp.com}")
     private String whatsappApiUrl;
@@ -27,6 +35,16 @@ public class WhatsAppNotificationService {
     private final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_TIME;
 
     public void notifyEvent(DomainEvent event) {
+        if (!whatsappEnabled) {
+            log.debug("WhatsApp notifications are disabled");
+            return;
+        }
+
+        if (whatsappToken == null || whatsappToken.isEmpty()) {
+            log.warn("WhatsApp token not configured, notification not sent");
+            return;
+        }
+
         String message = buildMessage(event);
         sendWhatsAppMessage(message);
     }
@@ -59,8 +77,22 @@ public class WhatsAppNotificationService {
     }
 
     private void sendWhatsAppMessage(String message) {
-        log.info("Enviando mensaje WhatsApp a {}: {}", phoneNumber, message);
-        // Aquí iría la integración real con la API de WhatsApp
-        // Usar RestTemplate o WebClient para hacer POST a whatsappApiUrl
+        try {
+            log.debug("Enviando mensaje WhatsApp a {}", phoneNumber);
+
+            Map<String, String> payload = new HashMap<>();
+            payload.put("phone", phoneNumber);
+            payload.put("message", message);
+
+            restTemplate.postForObject(
+                    whatsappApiUrl + "/send",
+                    payload,
+                    String.class
+            );
+
+            log.info("Mensaje WhatsApp enviado exitosamente a {}", phoneNumber);
+        } catch (Exception e) {
+            log.error("Error enviando mensaje WhatsApp a {}: {}", phoneNumber, e.getMessage(), e);
+        }
     }
 }
