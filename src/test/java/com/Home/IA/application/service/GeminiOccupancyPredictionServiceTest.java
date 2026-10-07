@@ -18,6 +18,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,10 +42,10 @@ class GeminiOccupancyPredictionServiceTest {
         UUID roomId = UUID.randomUUID();
         Instant now = Instant.now();
 
-        when(energyRepository.findByDeviceIdAndMeasuredAtAfter(anyString(), anyString()))
+        when(energyRepository.findByDeviceIdAndMeasuredAtAfter(anyString(), any(Instant.class)))
                 .thenReturn(Collections.emptyList());
 
-        double probability = service.predictOccupancyProbability(RoomId.of(roomId), now);
+        double probability = service.predictOccupancyProbability(new RoomId(roomId), now);
 
         assertEquals(0.5, probability, 0.01);
     }
@@ -58,17 +59,17 @@ class GeminiOccupancyPredictionServiceTest {
                 createEnergyData(150.0, now.minusSeconds(3600))
         );
 
-        when(energyRepository.findByDeviceIdAndMeasuredAtAfter(anyString(), anyString()))
+        when(energyRepository.findByDeviceIdAndMeasuredAtAfter(anyString(), any(Instant.class)))
                 .thenReturn(mockData);
 
-        double probability = service.predictOccupancyProbability(RoomId.of(roomId), now);
+        double probability = service.predictOccupancyProbability(new RoomId(roomId), now);
 
         assertTrue(probability >= 0.0 && probability <= 1.0);
     }
 
     private EnergyConsumptionHistoryEntity createEnergyData(double watts, Instant measuredAt) {
         EnergyConsumptionHistoryEntity entity = new EnergyConsumptionHistoryEntity();
-        entity.setConsumptionWatts(BigDecimal.valueOf(watts));
+        entity.setConsumptionWatts(watts);
         entity.setMeasuredAt(measuredAt);
         return entity;
     }
