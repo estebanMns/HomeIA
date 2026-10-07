@@ -1,7 +1,7 @@
 package com.home.ia.application.service;
 
-import com.google.ai.client.generativeai.GenerativeModel;
 import com.home.ia.domain.model.home.RoomId;
+import com.home.ia.infrastructure.client.GeminiApiClient;
 import com.home.ia.infrastructure.persistence.entity.EnergyConsumptionHistoryEntity;
 import com.home.ia.infrastructure.persistence.repository.EnergyConsumptionHistoryJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 class GeminiOccupancyPredictionServiceTest {
 
     @Mock
-    private GenerativeModel geminiModel;
+    private GeminiApiClient geminiApiClient;
 
     @Mock
     private EnergyConsumptionHistoryJpaRepository energyRepository;
@@ -33,7 +33,7 @@ class GeminiOccupancyPredictionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new GeminiOccupancyPredictionService(geminiModel, energyRepository);
+        service = new GeminiOccupancyPredictionService(geminiApiClient, energyRepository);
     }
 
     @Test

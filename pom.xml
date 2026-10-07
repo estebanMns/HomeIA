@@ -195,18 +195,6 @@
 			<artifactId>testcontainers-postgresql</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<!-- Google Generative AI (Gemini) -->
-		<dependency>
-			<groupId>com.google.ai.client.generativeai</groupId>
-			<artifactId>google-generativeai</artifactId>
-			<version>0.7.0</version>
-		</dependency>
-		<!-- JSON parsing for AI responses -->
-		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
-			<version>2.10.1</version>
-		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>

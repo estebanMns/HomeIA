@@ -1,14 +1,13 @@
 package com.home.ia.infrastructure.config;
 
-import com.google.ai.client.generativeai.GenerativeModel;
-import lombok.RequiredArgsConstructor;
+import com.home.ia.infrastructure.client.GeminiApiClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
 
 @Configuration
-@RequiredArgsConstructor
 @Slf4j
 public class GeminiConfig {
 
@@ -19,8 +18,8 @@ public class GeminiConfig {
     private String modelId;
 
     @Bean
-    public GenerativeModel geminiModel() {
-        log.info("Inicializando modelo Gemini: {}", modelId);
-        return new GenerativeModel(modelId, apiKey);
+    public GeminiApiClient geminiApiClient(RestTemplate restTemplate) {
+        log.info("Inicializando cliente Gemini con modelo: {}", modelId);
+        return new GeminiApiClient(apiKey, modelId, restTemplate);
     }
 }

@@ -1,10 +1,9 @@
 package com.home.ia.application.service;
 
-import com.google.ai.client.generativeai.GenerativeModel;
-import com.google.ai.client.generativeai.java.GenerativeAIException;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.home.ia.domain.model.home.RoomId;
+import com.home.ia.infrastructure.client.GeminiApiClient;
 import com.home.ia.infrastructure.persistence.entity.EnergyConsumptionHistoryEntity;
 import com.home.ia.infrastructure.persistence.repository.EnergyConsumptionHistoryJpaRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +21,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class GeminiOccupancyPredictionService {
 
-    private final GenerativeModel geminiModel;
+    private final GeminiApiClient geminiApiClient;
     private final EnergyConsumptionHistoryJpaRepository energyRepository;
     private final ConcurrentHashMap<String, CachedPrediction> predictionCache = new ConcurrentHashMap<>();
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private static final long CACHE_DURATION_MINUTES = 5;
 
     public double predictOccupancyProbability(RoomId roomId, Instant now) {
@@ -98,14 +98,10 @@ public class GeminiOccupancyPredictionService {
     private String queryGemini(String prompt) {
         try {
             log.debug("Querying Gemini for occupancy prediction");
-            var response = geminiModel.generateContent(prompt);
-            String content = response.getContent().getParts().stream()
-                    .map(part -> part.asText())
-                    .findFirst()
-                    .orElse("{}");
-            log.debug("Gemini response: {}", content);
-            return content;
-        } catch (GenerativeAIException e) {
+            String response = geminiApiClient.generateContent(prompt);
+            log.debug("Gemini response: {}", response);
+            return response;
+        } catch (Exception e) {
             log.error("Gemini API error: {}", e.getMessage());
             throw new RuntimeException("Error calling Gemini API", e);
         }
@@ -115,10 +111,10 @@ public class GeminiOccupancyPredictionService {
         try {
             // Intentar parsear como JSON
             String cleanedResponse = response.replaceAll("```json|```", "").trim();
-            JsonObject json = JsonParser.parseString(cleanedResponse).getAsJsonObject();
+            JsonNode json = objectMapper.readTree(cleanedResponse);
 
             if (json.has("probability")) {
-                double probability = json.get("probability").getAsDouble();
+                double probability = json.get("probability").asDouble();
                 if (probability < 0.0 || probability > 1.0) {
                     log.warn("Invalid probability from Gemini: {}, using default", probability);
                     return 0.5;
