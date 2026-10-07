@@ -49,8 +49,11 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/persistence/DeviceRepositoryAdapter.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/controller/AutomationController.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/controller/DeviceController.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/controller/RoomController.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/dto/AlertDTO.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/dto/AutomationResultDTO.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/dto/DeviceDTO.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/dto/RoomDTO.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/config/ApplicationConfiguration.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/entity/AlertEntity.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/entity/DeviceEntity.java
@@ -60,4 +63,5 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/repository/DeviceJpaRepository.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/repository/DomainEventJpaRepository.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/repository/EnergyConsumptionHistoryJpaRepository.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/repository/RoomJpaRepository.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/scheduler/VacantRoomsScheduler.java

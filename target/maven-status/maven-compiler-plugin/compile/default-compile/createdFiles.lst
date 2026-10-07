@@ -25,6 +25,7 @@ com/home/ia/domain/model/alert/Alert.class
 com/home/ia/infrastructure/persistence/entity/DeviceEntity$DeviceEntityBuilder.class
 com/home/ia/domain/event/EnergyLeakSuspectedEvent.class
 com/home/ia/infrastructure/config/ApplicationConfiguration.class
+com/home/ia/infrastructure/persistence/repository/RoomJpaRepository.class
 com/home/ia/domain/model/alert/AlertId.class
 com/home/ia/infrastructure/persistence/entity/EnergyConsumptionHistoryEntity.class
 com/home/ia/infrastructure/persistence/repository/DomainEventJpaRepository.class
@@ -35,6 +36,7 @@ com/home/ia/domain/exception/DeviceOfflineException.class
 com/home/ia/infrastructure/persistence/entity/RoomEntity$RoomEntityBuilder.class
 com/home/ia/domain/model/device/SmartOutlet.class
 com/home/ia/domain/model/device/Device.class
+com/home/ia/infrastructure/adapter/rest/dto/AutomationResultDTO$AutomationResultDTOBuilder.class
 com/home/ia/infrastructure/persistence/entity/AlertEntity$AlertEntityBuilder.class
 com/home/ia/domain/model/energy/ConsumptionThreshold.class
 com/home/ia/infrastructure/persistence/repository/EnergyConsumptionHistoryJpaRepository.class
@@ -42,6 +44,7 @@ com/home/ia/infrastructure/adapter/device/MqttDeviceCommandAdapter.class
 com/home/ia/domain/model/device/PowerState.class
 com/home/ia/application/port/in/SwitchOffVacantRoomsUseCase.class
 com/home/ia/domain/policy/AlertCooldownPolicy.class
+com/home/ia/infrastructure/adapter/rest/dto/AutomationResultDTO.class
 com/home/ia/domain/model/home/Room.class
 com/home/ia/domain/model/home/WhatsAppNumber.class
 com/home/ia/domain/model/device/DeviceType.class
@@ -52,9 +55,11 @@ com/home/ia/domain/event/DomainEvent.class
 com/home/ia/domain/model/device/PresenceSensor.class
 com/home/ia/infrastructure/adapter/rest/controller/AutomationController.class
 com/home/ia/application/port/out/OccupancyPredictionPort.class
+com/home/ia/infrastructure/adapter/rest/dto/RoomDTO.class
 com/home/ia/domain/event/ExcessiveConsumptionEvent.class
 com/home/ia/IaApplication.class
 com/home/ia/infrastructure/persistence/entity/DomainEventEntity.class
+com/home/ia/infrastructure/adapter/rest/controller/RoomController.class
 com/home/ia/domain/model/device/DeviceId.class
 com/home/ia/infrastructure/adapter/rest/dto/DeviceDTO$DeviceDTOBuilder.class
 com/home/ia/infrastructure/persistence/entity/DeviceEntity.class
@@ -63,6 +68,7 @@ com/home/ia/domain/event/RoomVacatedEvent.class
 com/home/ia/domain/exception/DomainException.class
 com/home/ia/domain/model/home/RoomId.class
 com/home/ia/infrastructure/adapter/rest/dto/AlertDTO.class
+com/home/ia/infrastructure/adapter/rest/dto/RoomDTO$RoomDTOBuilder.class
 com/home/ia/domain/policy/OccupancyPolicy.class
 com/home/ia/application/port/out/DeviceRepositoryPort.class
 com/home/ia/domain/model/alert/AlertType.class
