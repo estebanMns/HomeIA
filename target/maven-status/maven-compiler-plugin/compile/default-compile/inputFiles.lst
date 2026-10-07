@@ -42,6 +42,8 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/policy/ExcessiveConsumptionPolicy.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/policy/OccupancyPolicy.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/policy/OutletProtectionPolicy.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/device/MqttDeviceCommandAdapter.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/persistence/DeviceRepositoryAdapter.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/controller/DeviceController.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/dto/DeviceDTO.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/entity/AlertEntity.java

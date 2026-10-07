@@ -3,6 +3,8 @@ com/home/ia/infrastructure/persistence/entity/AlertEntity.class
 com/home/ia/domain/model/energy/EnergyReading.class
 com/home/ia/domain/model/energy/EnergyTariff.class
 com/home/ia/domain/event/DevicesSwitchedOffAutomaticallyEvent.class
+com/home/ia/infrastructure/adapter/persistence/DeviceRepositoryAdapter.class
+com/home/ia/infrastructure/adapter/persistence/DeviceRepositoryAdapter$1.class
 com/home/ia/domain/policy/OutletProtectionPolicy.class
 com/home/ia/application/service/SwitchOffVacantRoomsService.class
 com/home/ia/application/port/out/DomainEventPublisherPort.class
@@ -28,6 +30,7 @@ com/home/ia/domain/model/device/SmartOutlet.class
 com/home/ia/domain/model/device/Device.class
 com/home/ia/infrastructure/persistence/entity/AlertEntity$AlertEntityBuilder.class
 com/home/ia/domain/model/energy/ConsumptionThreshold.class
+com/home/ia/infrastructure/adapter/device/MqttDeviceCommandAdapter.class
 com/home/ia/domain/model/device/PowerState.class
 com/home/ia/application/port/in/SwitchOffVacantRoomsUseCase.class
 com/home/ia/domain/policy/AlertCooldownPolicy.class
