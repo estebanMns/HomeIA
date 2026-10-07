@@ -45,7 +45,7 @@ public class OccupancyPredictionAdapter implements OccupancyPredictionPort {
             }
 
             double averageConsumption = recentConsumption.stream()
-                    .mapToDouble(entity -> entity.getConsumptionWatts())
+                    .mapToDouble(entity -> entity.getConsumptionWatts().doubleValue())
                     .average()
                     .orElse(0.0);
 
