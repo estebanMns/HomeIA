@@ -16,7 +16,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DeviceRepositoryAdapter implements DeviceRepositoryPort {
 
-    private final DeviceJpaRepository jpaRepository = null;
+    private final DeviceJpaRepository jpaRepository;
 
     @Override
     public List<PresenceSensor> findAllPresenceSensors() {
