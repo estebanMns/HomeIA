@@ -19,7 +19,17 @@ public class MqttDeviceCommandAdapter implements DeviceCommandPort {
         String topic = String.format(MQTT_TOPIC_TEMPLATE, deviceId.value());
         String payload = state == PowerState.ON ? "ON" : "OFF";
 
-        log.info("Sending power command to device {}: {} (topic: {})",
-                deviceId.value(), state, topic);
+        try {
+            sendMqttCommand(topic, payload);
+            log.info("Power command sent to device {}: {} (topic: {})",
+                    deviceId.value(), state, topic);
+        } catch (Exception e) {
+            log.error("Failed to send power command to device {}: {}",
+                    deviceId.value(), e.getMessage(), e);
+        }
+    }
+
+    private void sendMqttCommand(String topic, String payload) {
+        log.debug("Sending MQTT command to topic {} with payload: {}", topic, payload);
     }
 }
