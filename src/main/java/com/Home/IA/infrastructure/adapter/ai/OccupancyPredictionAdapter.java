@@ -10,9 +10,9 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @RequiredArgsConstructor
@@ -20,20 +20,28 @@ import java.util.Map;
 public class OccupancyPredictionAdapter implements OccupancyPredictionPort {
 
     private final EnergyConsumptionHistoryJpaRepository energyRepository;
-    private final Map<String, Double> roomPredictionCache = new HashMap<>();
+    private final ConcurrentHashMap<String, Double> roomPredictionCache = new ConcurrentHashMap<>();
 
     @Override
     public double probabilityOfReturn(RoomId roomId, Instant now) {
         String roomIdStr = roomId.value().toString();
 
+        // Consultar el cache primero
+        if (roomPredictionCache.containsKey(roomIdStr)) {
+            log.debug("Cache hit for room {}", roomIdStr);
+            return roomPredictionCache.get(roomIdStr);
+        }
+
         try {
             Instant pastTwentyFourHours = now.minus(24, ChronoUnit.HOURS);
-            List<EnergyConsumptionHistoryEntity> recentConsumption = energyRepository
-                    .findByDeviceIdAndMeasuredAtAfter(roomIdStr, pastTwentyFourHours);
+            List<EnergyConsumptionHistoryEntity> recentConsumption =
+                    getEnergyConsumptionForRoom(roomIdStr, pastTwentyFourHours);
 
             if (recentConsumption.isEmpty()) {
-                log.debug("No recent consumption data for room {}, returning 0.5", roomIdStr);
-                return 0.5;
+                log.debug("No recent consumption data for room {}, returning default probability", roomIdStr);
+                double defaultProbability = 0.5;
+                roomPredictionCache.put(roomIdStr, defaultProbability);
+                return defaultProbability;
             }
 
             double averageConsumption = recentConsumption.stream()
@@ -47,8 +55,17 @@ public class OccupancyPredictionAdapter implements OccupancyPredictionPort {
             log.debug("Predicted occupancy probability for room {}: {}", roomIdStr, probability);
             return probability;
         } catch (Exception e) {
-            log.error("Error predicting occupancy for room {}", roomIdStr, e);
-            return 0.0;
+            log.error("Error predicting occupancy for room {}: {}", roomIdStr, e.getMessage());
+            return 0.5;
+        }
+    }
+
+    private List<EnergyConsumptionHistoryEntity> getEnergyConsumptionForRoom(String roomId, Instant afterTime) {
+        try {
+            return energyRepository.findByDeviceIdAndMeasuredAtAfter(roomId, afterTime);
+        } catch (Exception e) {
+            log.warn("Failed to retrieve energy consumption data for room {}: {}", roomId, e.getMessage());
+            return Collections.emptyList();
         }
     }
 

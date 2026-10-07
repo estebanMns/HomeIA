@@ -1,6 +1,8 @@
 package com.home.ia.infrastructure.adapter.rest.controller;
 
+import com.home.ia.infrastructure.adapter.rest.dto.DeviceDTO;
 import com.home.ia.infrastructure.adapter.rest.dto.RoomDTO;
+import com.home.ia.infrastructure.persistence.entity.DeviceEntity;
 import com.home.ia.infrastructure.persistence.entity.RoomEntity;
 import com.home.ia.infrastructure.persistence.repository.RoomJpaRepository;
 import lombok.RequiredArgsConstructor;
@@ -47,21 +49,25 @@ public class RoomController {
                 .name(entity.getName())
                 .homeId(entity.getHomeId())
                 .devices(entity.getDevices().stream()
-                        .map(device -> new com.home.ia.infrastructure.adapter.rest.dto.DeviceDTO(
-                                device.getId(),
-                                device.getName(),
-                                device.getRoomId(),
-                                device.getType(),
-                                device.getConnectionStatus(),
-                                device.getPowerState(),
-                                device.getLastStatusChange(),
-                                device.getBrightness(),
-                                device.getConsumption(),
-                                device.getCritical(),
-                                device.getPresence(),
-                                device.getLastPresenceDetected()
-                        ))
+                        .map(this::toDeviceDTO)
                         .toList())
+                .build();
+    }
+
+    private DeviceDTO toDeviceDTO(DeviceEntity device) {
+        return DeviceDTO.builder()
+                .id(device.getId())
+                .name(device.getName())
+                .roomId(device.getRoomId())
+                .type(device.getType())
+                .connectionStatus(device.getConnectionStatus())
+                .powerState(device.getPowerState())
+                .lastStatusChange(device.getLastStatusChange())
+                .brightness(device.getBrightness())
+                .consumption(device.getConsumption())
+                .critical(device.getCritical())
+                .presence(device.getPresence())
+                .lastPresenceDetected(device.getLastPresenceDetected())
                 .build();
     }
 }
