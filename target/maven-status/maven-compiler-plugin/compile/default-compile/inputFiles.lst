@@ -15,7 +15,9 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/event/ExcessiveConsumptionEvent.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/port/in/AutomationResult.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/client/GeminiApiClient.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/mqtt/MqttAdapter.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/persistence/DeviceRepositoryAdapter.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/controller/DeviceCommandController.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/controller/DeviceController.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/service/AuditService.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/port/out/DomainEventPublisherPort.java
@@ -23,6 +25,7 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/port/in/SwitchOffVacantRoomsUseCase.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/config/GeminiConfig.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/alert/Alert.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/service/MqttService.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/service/GeminiOccupancyPredictionService.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/entity/DomainEventEntity.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/repository/DeviceJpaRepository.java
@@ -58,6 +61,7 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/home/RoomId.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/event/DevicesSwitchedOffAutomaticallyEvent.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/event/DomainEvent.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/mqtt/MqttConfig.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/in/websocket/WebSocketNotificationService.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/alert/AlertId.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/service/SwitchOffVacantRoomsService.java
