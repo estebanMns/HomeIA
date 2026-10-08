@@ -1,6 +1,8 @@
 package com.home.ia.infrastructure.adapter.rest.controller;
 
 import com.home.ia.application.service.AuditService;
+import com.home.ia.application.service.MetricsService;
+import com.home.ia.application.service.RefreshTokenService;
 import com.home.ia.infrastructure.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -18,14 +21,18 @@ public class AuthController {
 
     private final JwtUtil jwtUtil;
     private final AuditService auditService;
+    private final RefreshTokenService refreshTokenService;
+    private final MetricsService metricsService;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+        long startTime = System.currentTimeMillis();
         log.info("POST /api/auth/login - Intento de login para usuario: {}", request.getEmail());
         try {
             if (request.getEmail() == null || request.getEmail().isEmpty()) {
                 log.warn("Intento de login con email vacío");
                 auditService.logAuthAction("UNKNOWN", "LOGIN_FAILED", "Email vacío");
+                metricsService.recordLoginFailure();
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(LoginResponse.builder()
                                 .success(false)
@@ -36,6 +43,7 @@ public class AuthController {
             if (request.getPassword() == null || request.getPassword().isEmpty()) {
                 log.warn("Intento de login con password vacío para email: {}", request.getEmail());
                 auditService.logAuthAction("UNKNOWN", "LOGIN_FAILED", "Password vacío");
+                metricsService.recordLoginFailure();
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(LoginResponse.builder()
                                 .success(false)
@@ -43,29 +51,34 @@ public class AuthController {
                                 .build());
             }
 
-            // TODO: Validar contra base de datos real
-            // Por ahora usamos un usuario de prueba
             if ("andrea@homeia.co".equals(request.getEmail()) && "HomeIA2025".equals(request.getPassword())) {
                 String userId = "user-001";
-                String token = jwtUtil.generateToken(userId, request.getEmail());
+                String accessToken = jwtUtil.generateToken(userId, request.getEmail());
+                String refreshToken = refreshTokenService.generateRefreshToken(userId, request.getEmail());
 
                 log.info("Login exitoso para usuario: {}", request.getEmail());
                 auditService.logAuthAction(userId, "LOGIN_SUCCESS",
                         "Usuario logueado exitosamente desde " + request.getIpAddress());
 
+                metricsService.recordLoginSuccess();
+                long duration = System.currentTimeMillis() - startTime;
+                metricsService.recordAuthenticationDuration(duration);
+
                 return ResponseEntity.ok(LoginResponse.builder()
                         .success(true)
                         .message("Login exitoso")
-                        .token(token)
+                        .accessToken(accessToken)
+                        .refreshToken(refreshToken)
                         .userId(userId)
                         .email(request.getEmail())
-                        .expiresIn(86400)
+                        .expiresIn(3600)
                         .timestamp(Instant.now())
                         .build());
             } else {
                 log.warn("Credenciales inválidas para email: {}", request.getEmail());
                 auditService.logAuthAction("UNKNOWN", "LOGIN_FAILED",
                         "Credenciales inválidas para: " + request.getEmail());
+                metricsService.recordLoginFailure();
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(LoginResponse.builder()
                                 .success(false)
@@ -75,10 +88,55 @@ public class AuthController {
         } catch (Exception e) {
             log.error("Error durante login: {}", e.getMessage(), e);
             auditService.logAuthAction("UNKNOWN", "LOGIN_ERROR", "Error: " + e.getMessage());
+            metricsService.recordLoginFailure();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(LoginResponse.builder()
                             .success(false)
                             .message("Error interno del servidor")
+                            .build());
+        }
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<RefreshResponse> refresh(@RequestBody RefreshRequest request) {
+        log.info("POST /api/auth/refresh - Refresh token request");
+        try {
+            if (request.getRefreshToken() == null || request.getRefreshToken().isEmpty()) {
+                log.warn("Refresh token vacío");
+                auditService.logAuthAction("UNKNOWN", "REFRESH_FAILED", "Refresh token vacío");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(RefreshResponse.builder()
+                                .success(false)
+                                .message("Refresh token es requerido")
+                                .build());
+            }
+
+            Optional<String> newAccessToken = refreshTokenService.refreshAccessToken(request.getRefreshToken());
+
+            if (newAccessToken.isPresent()) {
+                log.info("Access token refrescado exitosamente");
+                return ResponseEntity.ok(RefreshResponse.builder()
+                        .success(true)
+                        .message("Access token refrescado")
+                        .accessToken(newAccessToken.get())
+                        .expiresIn(3600)
+                        .timestamp(Instant.now())
+                        .build());
+            } else {
+                log.warn("Refresh token inválido o expirado");
+                auditService.logAuthAction("UNKNOWN", "REFRESH_FAILED", "Refresh token inválido");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(RefreshResponse.builder()
+                                .success(false)
+                                .message("Refresh token inválido o expirado")
+                                .build());
+            }
+        } catch (Exception e) {
+            log.error("Error refrescando token: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(RefreshResponse.builder()
+                            .success(false)
+                            .message("Error refrescando token")
                             .build());
         }
     }
@@ -103,8 +161,11 @@ public class AuthController {
             String userId = jwtUtil.extractUserId(token);
             String email = jwtUtil.extractEmail(token);
 
+            // Revocar todos los refresh tokens del usuario
+            refreshTokenService.revokeAllTokens(userId);
+
             log.info("Logout exitoso para usuario: {}", userId);
-            auditService.logAuthAction(userId, "LOGOUT", "Usuario deslogueado");
+            auditService.logAuthAction(userId, "LOGOUT", "Usuario deslogueado y todos los tokens revocados");
 
             return ResponseEntity.ok(LogoutResponse.builder()
                     .success(true)
@@ -188,9 +249,30 @@ public class AuthController {
     public static class LoginResponse {
         private Boolean success;
         private String message;
-        private String token;
+        private String accessToken;
+        private String refreshToken;
         private String userId;
         private String email;
+        private Integer expiresIn;
+        private Instant timestamp;
+    }
+
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    @lombok.Builder
+    public static class RefreshRequest {
+        private String refreshToken;
+    }
+
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    @lombok.Builder
+    public static class RefreshResponse {
+        private Boolean success;
+        private String message;
+        private String accessToken;
         private Integer expiresIn;
         private Instant timestamp;
     }

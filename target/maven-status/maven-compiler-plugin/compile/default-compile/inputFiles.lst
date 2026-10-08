@@ -29,6 +29,7 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/service/MqttService.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/service/GeminiOccupancyPredictionService.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/entity/DomainEventEntity.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/repository/RefreshTokenJpaRepository.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/repository/DeviceJpaRepository.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/device/MqttDeviceCommandAdapter.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/dto/RoomDTO.java
@@ -70,6 +71,7 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/alert/AlertId.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/service/SwitchOffVacantRoomsService.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/controller/AlertController.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/entity/RefreshTokenEntity.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/home/Room.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/port/out/OccupancyPredictionPort.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/notification/WhatsAppNotificationService.java
@@ -86,6 +88,7 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/entity/RoomEntity.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/alert/AlertSeverity.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/event/RoomVacatedEvent.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/service/RefreshTokenService.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/device/PowerState.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/policy/AlertCooldownPolicy.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/config/RestTemplateConfig.java

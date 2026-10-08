@@ -20,6 +20,7 @@ com/home/ia/infrastructure/client/GeminiApiClient.class
 com/home/ia/domain/model/home/Home.class
 com/home/ia/infrastructure/persistence/repository/DeviceJpaRepository.class
 com/home/ia/domain/exception/DeviceOfflineException.class
+com/home/ia/infrastructure/persistence/repository/RefreshTokenJpaRepository.class
 com/home/ia/infrastructure/adapter/rest/controller/AuthController$LogoutResponse$LogoutResponseBuilder.class
 com/home/ia/domain/model/device/Device.class
 com/home/ia/infrastructure/adapter/rest/dto/AutomationResultDTO$AutomationResultDTOBuilder.class
@@ -31,6 +32,7 @@ com/home/ia/infrastructure/adapter/device/MqttDeviceCommandAdapter.class
 com/home/ia/infrastructure/adapter/rest/controller/AuthController$TokenValidationResponse.class
 com/home/ia/infrastructure/adapter/rest/controller/AutomationRestController$ActionHistory.class
 com/home/ia/application/port/in/SwitchOffVacantRoomsUseCase.class
+com/home/ia/infrastructure/persistence/entity/RefreshTokenEntity.class
 com/home/ia/domain/policy/AlertCooldownPolicy.class
 com/home/ia/infrastructure/adapter/rest/dto/AutomationResultDTO.class
 com/home/ia/domain/model/home/WhatsAppNumber.class
@@ -39,15 +41,18 @@ com/home/ia/domain/model/device/PresenceSensor.class
 com/home/ia/infrastructure/adapter/rest/controller/AutomationController.class
 com/home/ia/application/port/out/OccupancyPredictionPort.class
 com/home/ia/infrastructure/adapter/rest/dto/RoomDTO.class
+com/home/ia/application/service/RefreshTokenService.class
 com/home/ia/domain/event/ExcessiveConsumptionEvent.class
 com/home/ia/infrastructure/adapter/rest/controller/RoomController.class
 com/home/ia/infrastructure/adapter/rest/dto/DeviceDTO$DeviceDTOBuilder.class
 com/home/ia/infrastructure/adapter/rest/controller/AutomationRestController$AutomationSettings$AutomationSettingsBuilder.class
 com/home/ia/domain/event/RoomVacatedEvent.class
+com/home/ia/infrastructure/adapter/rest/controller/AuthController$RefreshResponse$RefreshResponseBuilder.class
 com/home/ia/infrastructure/adapter/rest/controller/WebSocketStatusController.class
 com/home/ia/infrastructure/adapter/rest/dto/AlertDTO.class
 com/home/ia/infrastructure/adapter/rest/dto/RoomDTO$RoomDTOBuilder.class
 com/home/ia/application/port/out/DeviceRepositoryPort.class
+com/home/ia/infrastructure/adapter/rest/controller/AuthController$RefreshResponse.class
 com/home/ia/infrastructure/security/JwtAuthenticationFilter.class
 com/home/ia/domain/model/alert/AlertType.class
 com/home/ia/infrastructure/adapter/rest/dto/DeviceDTO.class
@@ -71,9 +76,11 @@ com/home/ia/infrastructure/adapter/ai/GeminiOccupancyPredictionAdapter.class
 com/home/ia/infrastructure/config/GeminiConfig.class
 com/home/ia/domain/model/device/SwitchableDevice.class
 com/home/ia/infrastructure/security/SecurityConfig.class
+com/home/ia/infrastructure/persistence/entity/RefreshTokenEntity$RefreshTokenEntityBuilder.class
 com/home/ia/infrastructure/adapter/rest/controller/AuthController$LoginResponse$LoginResponseBuilder.class
 com/home/ia/infrastructure/persistence/entity/DomainEventEntity$DomainEventEntityBuilder.class
 com/home/ia/application/service/WebSocketService.class
+com/home/ia/infrastructure/adapter/rest/controller/AuthController$RefreshRequest.class
 com/home/ia/infrastructure/adapter/rest/controller/AuthController$LoginResponse.class
 com/home/ia/domain/model/alert/Alert.class
 com/home/ia/infrastructure/adapter/rest/controller/DeviceCommandController.class
@@ -129,3 +136,4 @@ com/home/ia/infrastructure/adapter/rest/controller/DeviceCommandController$MqttS
 com/home/ia/domain/policy/OccupancyPolicy.class
 com/home/ia/infrastructure/scheduler/VacantRoomsScheduler.class
 com/home/ia/infrastructure/persistence/entity/EnergyConsumptionHistoryEntity$EnergyConsumptionHistoryEntityBuilder.class
+com/home/ia/infrastructure/adapter/rest/controller/AuthController$RefreshRequest$RefreshRequestBuilder.class
