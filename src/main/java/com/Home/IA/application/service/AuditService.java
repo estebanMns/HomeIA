@@ -115,4 +115,26 @@ public class AuditService {
             log.error("Error al registrar auditoría de alerta: {}", e.getMessage(), e);
         }
     }
+
+    public void logAuthAction(String userId, String action, String details) {
+        try {
+            Map<String, String> payload = new HashMap<>();
+            payload.put("userId", userId);
+            payload.put("action", action);
+            payload.put("details", details);
+
+            DomainEventEntity event = DomainEventEntity.builder()
+                    .id(UUID.randomUUID().toString())
+                    .eventType("AUTH_ACTION")
+                    .payload(objectMapper.writeValueAsString(payload))
+                    .occurredAt(Instant.now())
+                    .createdAt(Instant.now())
+                    .build();
+
+            eventRepository.save(event);
+            log.info("Auditoría AUTH: usuario={}, acción={}", userId, action);
+        } catch (Exception e) {
+            log.error("Error al registrar auditoría de autenticación: {}", e.getMessage(), e);
+        }
+    }
 }

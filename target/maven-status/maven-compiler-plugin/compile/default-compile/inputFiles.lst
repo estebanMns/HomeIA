@@ -10,6 +10,7 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/energy/EnergyReading.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/alert/AlertType.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/exception/DeviceOfflineException.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/controller/AuthController.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/repository/RoomJpaRepository.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/event/ExcessiveConsumptionEvent.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/port/in/AutomationResult.java
@@ -38,6 +39,7 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/device/Switchable.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/scheduler/VacantRoomsScheduler.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/energy/ConsumptionThreshold.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/security/SecurityConfig.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/entity/AlertEntity.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/energy/EnergyTariff.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/device/DeviceType.java
@@ -46,6 +48,7 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/policy/OutletProtectionPolicy.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/ai/GeminiOccupancyPredictionAdapter.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/config/WebSocketConfig.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/security/JwtAuthenticationFilter.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/home/Home.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/home/HomeId.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/persistence/repository/DomainEventJpaRepository.java
@@ -62,6 +65,7 @@
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/model/home/Room.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/application/port/out/OccupancyPredictionPort.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/notification/WhatsAppNotificationService.java
+/Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/security/JwtUtil.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/rest/dto/DeviceDTO.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/infrastructure/adapter/ai/OccupancyPredictionAdapter.java
 /Users/estebanmeneses/Desktop/HomeIA/src/main/java/com/home/ia/domain/event/PresenceDetectedEvent.java
