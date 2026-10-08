@@ -323,3 +323,246 @@ Todos los endpoints están documentados automáticamente con Springdoc OpenAPI.
 ---
 
 **Generado con Claude Haiku 4.5 - 2026-10-08**
+
+---
+
+## 🔔 WebSocket - Notificaciones en Tiempo Real
+
+### Configuración
+
+#### **WebSocketConfig** (`infrastructure/websocket/WebSocketConfig.java`)
+- Configuración de STOMP (Simple Text Oriented Messaging Protocol)
+- Habilita Simple Message Broker
+- 3 endpoints STOMP:
+  - `/ws/notifications` - Notificaciones generales
+  - `/ws/devices` - Eventos de dispositivos
+  - `/ws/mqtt` - Eventos MQTT
+
+#### **WebSocketService** (`application/service/WebSocketService.java`)
+Métodos para enviar notificaciones:
+- `notifyDeviceStatusChanged()` - Cambios de estado de dispositivos
+- `notifyMqttMessage()` - Mensajes MQTT recibidos
+- `notifyDeviceCommand()` - Comandos enviados a dispositivos
+- `notifyAlert()` - Alertas generadas
+- `notifyAutomationEvent()` - Eventos de automatización
+- `notifyConnectionStatus()` - Estado de conexiones
+- `broadcastToAll()` - Broadcast a todos los clientes
+
+#### **NotificationController** (`adapter/rest/controller/NotificationController.java`)
+- **STOMP Message Mappings:**
+  - `/app/notification/subscribe` → `/topic/notifications`
+  - `/app/device/subscribe` → `/topic/devices`
+  - `/app/mqtt/subscribe` → `/topic/mqtt/status`
+  - `/app/ping` → `/topic/pong`
+
+- **REST Endpoints:**
+  - `GET /api/ws/status` - Verificar conexión WebSocket
+  - `GET /api/ws/test-notification` - Enviar notificación de prueba
+  - `GET /api/ws/test-alert` - Enviar alerta de prueba
+
+### Tópicos WebSocket
+
+```
+/topic/devices/{deviceId}     - Eventos específicos de dispositivo
+/topic/devices                - Todos los eventos de dispositivos
+/topic/alerts                 - Alertas
+/queue/alerts                 - Alertas privadas
+/topic/mqtt/messages          - Mensajes MQTT
+/topic/commands               - Comandos de dispositivos
+/topic/automation             - Eventos de automatización
+/topic/connection-status      - Estado de conexiones
+/topic/notifications          - Notificaciones generales
+/topic/pong                   - Respuesta a ping
+```
+
+### Cliente WebSocket (JavaScript Ejemplo)
+
+```javascript
+// Conectar
+const stompClient = new StompJs.Client({
+    brokerURL: 'ws://localhost:8080/ws/devices',
+    headers: {
+        'Authorization': 'Bearer ' + jwtToken
+    }
+});
+
+// Suscribirse
+stompClient.onConnect = function() {
+    stompClient.subscribe('/topic/devices/device-001', function(message) {
+        console.log('Device update:', JSON.parse(message.body));
+    });
+};
+
+stompClient.activate();
+```
+
+---
+
+## 📊 Prometheus Metrics
+
+### Configuración
+
+**application.properties:**
+```properties
+management.endpoints.web.exposure.include=health,metrics,prometheus
+management.metrics.enable.all=true
+```
+
+### Métricas Disponibles
+
+#### Counters (Contadores)
+
+| Métrica | Descripción |
+|---------|-------------|
+| `auth.login.success` | Logins exitosos |
+| `auth.login.failure` | Intentos de login fallidos |
+| `device.commands.total` | Total de comandos a dispositivos |
+| `mqtt.publish.total` | Mensajes publicados en MQTT |
+| `mqtt.subscribe.total` | Suscripciones a MQTT |
+| `alerts.total` | Total de alertas generadas |
+| `automation.actions.total` | Acciones de automatización ejecutadas |
+| `websocket.messages.total` | Mensajes enviados via WebSocket |
+
+#### Gauges (Medidores - Valores Actuales)
+
+| Métrica | Descripción |
+|---------|-------------|
+| `devices.active` | Dispositivos activos en este momento |
+| `mqtt.connections.active` | Conexiones MQTT activas |
+| `websocket.connections.active` | Conexiones WebSocket activas |
+
+#### Timers (Duraciones en ms)
+
+| Métrica | Descripción |
+|---------|-------------|
+| `device.command.duration` | Duración de comandos a dispositivos |
+| `mqtt.command.duration` | Duración de comandos MQTT |
+| `auth.duration` | Duración del proceso de autenticación |
+
+### Endpoints de Métricas
+
+**Personalizados:**
+- `GET /api/metrics/summary` - Resumen de métricas activas
+- `GET /api/metrics/devices` - Métricas de dispositivos
+- `GET /api/metrics/mqtt` - Métricas de MQTT
+- `GET /api/metrics/websocket` - Métricas de WebSocket
+- `GET /api/metrics/health` - Health check
+- `GET /api/metrics/prometheus-info` - Información de Prometheus
+
+**Estándar de Prometheus:**
+- `GET /actuator/prometheus` - Scrape para Prometheus (formato Prometheus)
+- `GET /actuator/health` - Health endpoint
+
+### Configuración de Prometheus
+
+**prometheus.yml:**
+```yaml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'homeIA'
+    static_configs:
+      - targets: ['localhost:8080']
+    metrics_path: '/actuator/prometheus'
+```
+
+### Grafana Queries (Ejemplos)
+
+```promql
+# Total de logins exitosos
+rate(auth.login.success[5m])
+
+# Dispositivos activos actualmente
+devices.active
+
+# Promedio de duración de comandos MQTT (últimas 5 min)
+rate(mqtt.command.duration_sum[5m]) / rate(mqtt.command.duration_count[5m])
+
+# Conexiones WebSocket activas
+websocket.connections.active
+
+# Intentos de login fallidos por minuto
+rate(auth.login.failure[1m])
+```
+
+---
+
+## 🌐 Integración Completa
+
+### Flujo de Eventos Completo
+
+```
+1. Usuario -> WebSocket /ws/devices
+   ↓
+2. NotificationController recibe suscripción
+   ↓
+3. Usuario controla dispositivo via REST
+   ↓
+4. DeviceCommandController procesa comando
+   ↓
+5. MqttService publica en MQTT + Auditoría
+   ↓
+6. WebSocketService envía notificación
+   ↓
+7. Cliente WebSocket recibe actualización en tiempo real
+   ↓
+8. MetricsService registra métricas
+   ↓
+9. Prometheus scrape recibe datos para dashboard
+```
+
+---
+
+## 📈 Dashboards Recomendados (Grafana)
+
+### Dashboard 1: Overview
+- Dispositivos activos (Gauge)
+- Conexiones MQTT (Gauge)
+- Conexiones WebSocket (Gauge)
+- Logins/min (Graph)
+- Alertas/min (Graph)
+
+### Dashboard 2: Performance
+- Device command duration p95 (Graph)
+- MQTT command latency (Graph)
+- Auth duration p99 (Graph)
+- Commands per second (Rate)
+
+### Dashboard 3: Activity
+- Logins éxito vs fracaso (Stacked Bar)
+- Comandos por tipo (Pie)
+- Automatizaciones ejecutadas (Counter)
+- WebSocket messages/sec (Rate)
+
+---
+
+## ✅ Resumen Final de Implementación
+
+| Componente | Status | Endpoints | Métricas |
+|-----------|--------|-----------|----------|
+| REST API | ✅ | 20+ endpoints | device.commands.total |
+| JWT Auth | ✅ | /api/auth/** | auth.login.* |
+| MQTT | ✅ | /api/devices/mqtt/** | mqtt.* |
+| WebSocket | ✅ | /ws/* | websocket.* |
+| Prometheus | ✅ | /actuator/prometheus | 14 métricas custom |
+| Auditoría | ✅ | domain_events table | Todos los eventos |
+| Logs | ✅ | SLF4J | Level DEBUG/INFO/WARN |
+
+---
+
+## 🚀 Próximos Pasos (Opcionales)
+
+1. **Rate Limiting:** Proteger endpoints contra abuso
+2. **Refresh Tokens:** Mejorar seguridad de JWT
+3. **Database Migrations:** Poblar usuarios reales
+4. **Email Notifications:** Alertas por correo
+5. **Push Notifications:** Notificaciones mobile
+6. **API Gateway:** Kong o Nginx para balance
+7. **Container Orchestration:** Kubernetes deployment
+8. **CD/CI Pipeline:** GitHub Actions o Jenkins
+
+---
+
+**Última Actualización:** 2026-10-08
+**Generado con:** Claude Haiku 4.5
