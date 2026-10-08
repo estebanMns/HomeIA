@@ -21,7 +21,7 @@ public class DeviceEntity {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(name = "room_id", nullable = false)
     private String roomId;
 
     @Enumerated(EnumType.STRING)

@@ -11,7 +11,7 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 public class GeminiConfig {
 
-    @Value("${gemini.api-key}")
+    @Value("${gemini.api-key:}")
     private String apiKey;
 
     @Value("${gemini.model-id:gemini-2.0-flash}")
@@ -19,7 +19,11 @@ public class GeminiConfig {
 
     @Bean
     public GeminiApiClient geminiApiClient(RestTemplate restTemplate) {
-        log.info("Inicializando cliente Gemini con modelo: {}", modelId);
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            log.warn("Gemini API Key no configurada - la funcionalidad de IA estará deshabilitada");
+        } else {
+            log.info("Inicializando cliente Gemini con modelo: {}", modelId);
+        }
         return new GeminiApiClient(apiKey, modelId, restTemplate);
     }
 }
