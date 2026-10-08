@@ -26,6 +26,7 @@ com/home/ia/infrastructure/adapter/rest/dto/AutomationResultDTO$AutomationResult
 com/home/ia/infrastructure/persistence/entity/AlertEntity$AlertEntityBuilder.class
 com/home/ia/domain/model/energy/ConsumptionThreshold.class
 com/home/ia/infrastructure/persistence/repository/EnergyConsumptionHistoryJpaRepository.class
+com/home/ia/infrastructure/adapter/rest/controller/NotificationController$SubscribeMessage.class
 com/home/ia/infrastructure/adapter/device/MqttDeviceCommandAdapter.class
 com/home/ia/infrastructure/adapter/rest/controller/AuthController$TokenValidationResponse.class
 com/home/ia/infrastructure/adapter/rest/controller/AutomationRestController$ActionHistory.class
@@ -43,6 +44,7 @@ com/home/ia/infrastructure/adapter/rest/controller/RoomController.class
 com/home/ia/infrastructure/adapter/rest/dto/DeviceDTO$DeviceDTOBuilder.class
 com/home/ia/infrastructure/adapter/rest/controller/AutomationRestController$AutomationSettings$AutomationSettingsBuilder.class
 com/home/ia/domain/event/RoomVacatedEvent.class
+com/home/ia/infrastructure/adapter/rest/controller/WebSocketStatusController.class
 com/home/ia/infrastructure/adapter/rest/dto/AlertDTO.class
 com/home/ia/infrastructure/adapter/rest/dto/RoomDTO$RoomDTOBuilder.class
 com/home/ia/application/port/out/DeviceRepositoryPort.class
@@ -71,6 +73,7 @@ com/home/ia/domain/model/device/SwitchableDevice.class
 com/home/ia/infrastructure/security/SecurityConfig.class
 com/home/ia/infrastructure/adapter/rest/controller/AuthController$LoginResponse$LoginResponseBuilder.class
 com/home/ia/infrastructure/persistence/entity/DomainEventEntity$DomainEventEntityBuilder.class
+com/home/ia/application/service/WebSocketService.class
 com/home/ia/infrastructure/adapter/rest/controller/AuthController$LoginResponse.class
 com/home/ia/domain/model/alert/Alert.class
 com/home/ia/infrastructure/adapter/rest/controller/DeviceCommandController.class
@@ -80,6 +83,7 @@ com/home/ia/domain/event/EnergyLeakSuspectedEvent.class
 com/home/ia/infrastructure/adapter/rest/controller/DeviceCommandController$CommandResponse$CommandResponseBuilder.class
 com/home/ia/domain/model/alert/AlertId.class
 com/home/ia/infrastructure/persistence/entity/EnergyConsumptionHistoryEntity.class
+com/home/ia/infrastructure/adapter/rest/controller/NotificationController.class
 com/home/ia/application/port/in/AutomationResult.class
 com/home/ia/infrastructure/adapter/rest/controller/AlertController$AlertDetail$AlertDetailBuilder.class
 com/home/ia/infrastructure/persistence/entity/RoomEntity$RoomEntityBuilder.class
@@ -87,6 +91,7 @@ com/home/ia/infrastructure/security/JwtUtil.class
 com/home/ia/infrastructure/adapter/rest/controller/AutomationRestController$AutomationStatus$AutomationStatusBuilder.class
 com/home/ia/domain/model/device/SmartOutlet.class
 com/home/ia/infrastructure/adapter/rest/controller/AutomationRestController$AutomationSettings.class
+com/home/ia/application/service/MetricsService.class
 com/home/ia/infrastructure/adapter/rest/controller/AutomationRestController.class
 com/home/ia/infrastructure/adapter/rest/controller/AlertController$AlertSummary.class
 com/home/ia/infrastructure/adapter/rest/controller/AlertController$AlertSummary$AlertSummaryBuilder.class
@@ -95,15 +100,19 @@ com/home/ia/infrastructure/config/RestTemplateConfig.class
 com/home/ia/infrastructure/adapter/rest/controller/AuthController$TokenValidationResponse$TokenValidationResponseBuilder.class
 com/home/ia/infrastructure/adapter/rest/controller/AutomationRestController$AutomationStatus.class
 com/home/ia/domain/model/device/PowerState.class
+com/home/ia/infrastructure/websocket/WebSocketConfig.class
 com/home/ia/infrastructure/adapter/rest/controller/DeviceCommandController$MqttStatusResponse$MqttStatusResponseBuilder.class
 com/home/ia/domain/model/home/Room.class
 com/home/ia/domain/model/device/DeviceType.class
 com/home/ia/domain/policy/ExcessiveConsumptionPolicy.class
 com/home/ia/infrastructure/adapter/notification/WhatsAppNotificationService.class
 com/home/ia/infrastructure/adapter/rest/controller/DeviceController.class
+com/home/ia/infrastructure/adapter/rest/controller/NotificationController$DeviceSubscribeMessage.class
 com/home/ia/infrastructure/adapter/rest/controller/AuthController.class
 com/home/ia/infrastructure/adapter/rest/controller/AutomationRestController$AutomationSettingsRequest$AutomationSettingsRequestBuilder.class
 com/home/ia/infrastructure/mqtt/MqttConfig$MqttProperties.class
+com/home/ia/infrastructure/adapter/rest/controller/MetricsController.class
+com/home/ia/infrastructure/adapter/rest/controller/NotificationController$MqttSubscribeMessage.class
 com/home/ia/IaApplication.class
 com/home/ia/infrastructure/persistence/entity/DomainEventEntity.class
 com/home/ia/domain/model/device/DeviceId.class
