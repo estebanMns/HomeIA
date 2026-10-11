@@ -1,107 +1,251 @@
-// Autenticación
-export interface LoginRequest {
-  email: string;
-  password: string;
-  ipAddress?: string;
-}
+// Espejo de los DTOs del backend (com.homeia.web)
 
-export interface LoginResponse {
-  success: boolean;
-  message: string;
-  accessToken?: string;
-  refreshToken?: string;
-  userId?: string;
-  email?: string;
-  expiresIn?: number;
-  timestamp?: string;
-}
+export type UserRole = 'ADMIN' | 'MEMBER';
 
-export interface RefreshTokenRequest {
-  refreshToken: string;
-}
-
-export interface RefreshTokenResponse {
-  success: boolean;
-  message: string;
-  accessToken?: string;
-  expiresIn?: number;
-  timestamp?: string;
-}
-
-// Usuario
 export interface User {
   id: string;
+  homeId: string;
   email: string;
-  name?: string;
-  avatar?: string;
+  fullName: string;
+  role: UserRole;
+  active: boolean;
+  lastLoginAt?: string;
+  createdAt: string;
 }
 
-// Dispositivos
+export interface Session {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  user: User;
+}
+
+export interface Home {
+  id: string;
+  name: string;
+  currency: string;
+  electricityPricePerKwh: number;
+  timezone: string;
+  updatedAt: string;
+}
+
+export interface Room {
+  id: string;
+  name: string;
+  location?: string;
+  createdAt: string;
+}
+
+export type DeviceType = 'LIGHT' | 'SMART_OUTLET' | 'PRESENCE_SENSOR';
+export type ConnectionStatus = 'ONLINE' | 'OFFLINE';
+export type PowerState = 'ON' | 'OFF';
+export type DeviceCommand = 'ON' | 'OFF' | 'TOGGLE' | 'BRIGHTNESS' | 'STATUS';
+
 export interface Device {
   id: string;
   name: string;
-  type: 'LIGHT' | 'SWITCH' | 'THERMOSTAT' | 'SENSOR' | 'PLUG';
-  status: 'ON' | 'OFF' | 'ONLINE' | 'OFFLINE';
-  roomId: string;
-  roomName: string;
-  temperature?: number;
-  humidity?: number;
-  power?: number;
-  lastUpdate?: string;
+  roomId?: string;
+  type: DeviceType;
+  connectionStatus: ConnectionStatus;
+  powerState: PowerState;
+  brightness?: number;
+  consumptionWatts: number;
+  critical: boolean;
+  presence?: boolean;
+  lastPresenceAt?: string;
+  lastStatusChangeAt?: string;
+  lastSeenAt?: string;
+  bluetoothId?: string;
 }
 
-export interface DeviceCommand {
-  success: boolean;
-  message: string;
-  deviceId?: string;
-  command?: string;
-  timestamp?: string;
-}
+export type AlertSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
+export type AlertType =
+  | 'EXCESSIVE_CONSUMPTION'
+  | 'POSSIBLE_ENERGY_LEAK'
+  | 'DEVICE_OFFLINE'
+  | 'AUTOMATIC_SHUTDOWN'
+  | 'MANUAL';
 
-// Alertas
 export interface Alert {
   id: string;
-  severity: 'CRITICAL' | 'WARNING' | 'INFO';
+  type: AlertType;
+  severity: AlertSeverity;
   title: string;
   message: string;
-  deviceName?: string;
+  roomId?: string;
   deviceId?: string;
-  timestamp: string;
-  whatsappStatus?: string;
-  read?: boolean;
+  acknowledged: boolean;
+  acknowledgedAt?: string;
+  acknowledgedBy?: string;
+  createdAt: string;
 }
 
-// Automatización
-export interface Automation {
+export interface Page<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface AutomationSettings {
+  enabled: boolean;
+  vacancyMinutes: number;
+  returnSensitivityPercent: number;
+  consumptionAlertWatts: number;
+  leakMinutes: number;
+  updatedAt: string;
+}
+
+export interface AutomationStatus {
+  enabled: boolean;
+  decisionsLast24h: number;
+  actionsTotal: number;
+  lastDecisionAt?: string;
+  predictionMode: 'GEMINI' | 'HISTORICO';
+  geminiConfigured: boolean;
+}
+
+export type ActionType =
+  | 'SWITCHED_OFF_VACANT_ROOM'
+  | 'MANUAL_SHUTDOWN'
+  | 'PROTECTED_CRITICAL_DEVICE'
+  | 'KEPT_ON_LIKELY_RETURN';
+
+export interface AutomationAction {
+  id: string;
+  roomId?: string;
+  deviceId?: string;
+  actionType: ActionType;
+  description: string;
+  wattsAvoided: number;
+  createdAt: string;
+}
+
+export interface EnergySummary {
+  totalKwh: number;
+  cost: number;
+  currency: string;
+  pricePerKwh: number;
+  peakWatts: number;
+  currentWatts: number;
+  devicesOn: number;
+  devicesTotal: number;
+  avoidedWattsEstimate: number;
+  avoidedCostPerHour: number;
+  from: string;
+  to: string;
+}
+
+export interface EnergyBucket {
+  start: string;
+  kwh: number;
+  cost: number;
+  averageWatts: number;
+}
+
+export interface RoomEnergy {
+  roomId: string;
+  roomName: string;
+  kwh: number;
+  cost: number;
+}
+
+export interface TariffPeriod {
+  id: string;
+  periodStart: string;
+  periodEnd: string;
+  unitPricePerKwh: number;
+  subsidyKwhLimit: number;
+  subsidyPercent: number;
+  publicLighting: number;
+  adjustment: number;
+}
+
+export interface TariffInput {
+  periodStart: string;
+  periodEnd: string;
+  unitPricePerKwh: number;
+  subsidyKwhLimit: number;
+  subsidyPercent: number;
+  publicLighting: number;
+  adjustment: number;
+}
+
+export interface MeterReading {
+  id: string;
+  readingKwh: number;
+  readAt: string;
+}
+
+export interface BillStatus {
+  tariff: TariffPeriod;
+  consumptionKwh?: number;
+  energyGross?: number;
+  subsidy?: number;
+  energyNet?: number;
+  adjustment?: number;
+  publicLighting?: number;
+  total?: number;
+  missing?: string;
+}
+
+export type MessageStatus = 'PENDING' | 'SENT' | 'FAILED';
+
+export interface WhatsAppStatus {
+  configured: boolean;
+  activeRecipients: number;
+  pendingMessages: number;
+  failedMessages: number;
+}
+
+export interface WhatsAppRecipient {
   id: string;
   name: string;
-  enabled: boolean;
-  trigger: string;
+  phone: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface WhatsAppMessage {
+  id: string;
+  alertId?: string;
+  recipientPhone: string;
+  body: string;
+  status: MessageStatus;
+  attempts: number;
+  lastError?: string;
+  providerMessageId?: string;
+  createdAt: string;
+  sentAt?: string;
+}
+
+export interface AuditEntry {
+  id: number;
+  actor: string;
   action: string;
-  description?: string;
-  lastRun?: string;
+  entityType: string;
+  entityId?: string;
+  details?: string;
+  createdAt: string;
 }
 
-// MQTT
-export interface MqttStatus {
-  connected: boolean;
-  message: string;
-  timestamp?: string;
+export interface SystemHealth {
+  status: string;
+  database: string;
+  mqtt: string;
+  whatsapp: string;
+  gemini: string;
+  checkedAt: string;
 }
 
-// WebSocket
-export interface WebSocketMessage {
-  type: string;
-  deviceId?: string;
-  status?: string;
-  details?: Record<string, any>;
-  timestamp?: string;
-}
-
-// Métricas
-export interface Metrics {
-  activeDevices: number;
-  activeMqttConnections: number;
-  activeWebSocketConnections: number;
-  timestamp?: string;
+export interface SystemMetrics {
+  devicesTotal: number;
+  devicesOnline: number;
+  devicesOn: number;
+  roomsTotal: number;
+  alertsOpen: number;
+  whatsappPending: number;
+  mqttConnected: boolean;
+  generatedAt: string;
 }

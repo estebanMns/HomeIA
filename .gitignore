@@ -56,3 +56,9 @@ node_modules/
 .classpath
 .project
 .settings/
+
+# Recibos y documentos personales (contienen datos sensibles)
+WhatsApp Image*.jpeg
+WhatsApp Image*.jpg
+WhatsApp Image*.png
+*.recibo.*

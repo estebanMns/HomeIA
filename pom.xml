@@ -183,7 +183,7 @@
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>2.9.1</version>
+			<version>3.1.1</version>
 		</dependency>
 
 		<!-- Mapeo entidad ↔ DTO, ayuda a mantener la responsabilidad única -->
@@ -229,7 +229,11 @@
 			<artifactId>h2</artifactId>
 			<scope>runtime</scope>
 		</dependency>
-	</dependencies>
+			<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+</dependencies>
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -247,6 +251,9 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<mainClass>com.homeia.HomeIaApplication</mainClass>
+				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

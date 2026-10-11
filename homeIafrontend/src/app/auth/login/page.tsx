@@ -1,114 +1,113 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ChevronRight, ShieldCheck, Sparkles, TrendingDown } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { api, ApiError } from '@/services/api';
+import { Badge, Logo } from '@/components/ui/Primitives';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
-  const [email, setEmail] = useState('andrea@homeia.co');
-  const [password, setPassword] = useState('HomeIA2025');
+  const { login, isAuthenticated, isLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace('/dashboard');
+      return;
+    }
+    api
+      .setupStatus()
+      .then((s) => {
+        if (s.needsSetup) router.replace('/setup');
+      })
+      .catch(() => setError('No se pudo conectar con el servidor de HomeIA'));
+  }, [isAuthenticated, isLoading, router]);
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
-
+    setSubmitting(true);
     try {
-      const success = await login(email, password);
-      if (success) {
-        router.push('/dashboard');
-      } else {
-        setError('Email o contraseña incorrectos');
-      }
+      await login(email, password);
+      router.push('/dashboard');
     } catch (err) {
-      setError('Error al iniciar sesión');
+      setError(err instanceof ApiError ? err.message : 'No se pudo conectar con el servidor de HomeIA');
     } finally {
-      setIsLoading(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">HomeIA</h1>
-          <p className="text-blue-100">Control inteligente de tu hogar</p>
+    <div className="login-page">
+      <div className="login-brand">
+        <Logo />
+        <div className="login-message">
+          <Badge tone="blue">
+            <Sparkles size={12} /> Energía inteligente
+          </Badge>
+          <div>
+            Tu casa ahorra
+            <br />
+            energía <em>sola.</em>
+          </div>
+          <p>HomeIA entiende cómo vives, optimiza cada espacio y reduce tu consumo sin que tengas que pensarlo.</p>
         </div>
+        <div className="login-stat">
+          <TrendingDown size={24} />
+          <div>
+            <strong>Automatización activa</strong>
+            <span>apagado inteligente de habitaciones vacías</span>
+          </div>
+        </div>
+      </div>
 
-        {/* Login Card */}
-        <div className="bg-white rounded-lg shadow-2xl p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Iniciar Sesión</h2>
+      <div className="login-form-wrap">
+        <form className="login-form" onSubmit={handleSubmit}>
+          <div className="mobile-logo">
+            <Logo />
+          </div>
+          <div className="detail-title">Bienvenido de nuevo</div>
+          <p>Ingresa para ver cómo está ahorrando tu hogar.</p>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+            <div className="card" style={{ margin: '14px 0', color: 'var(--red)', borderColor: 'var(--red)' }}>
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email */}
+          <label className="field">
+            <span>Correo electrónico</span>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Correo Electrónico
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                placeholder="tu@email.com"
-                required
-              />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
             </div>
-
-            {/* Password */}
+          </label>
+          <label className="field">
+            <span>Contraseña</span>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contraseña
-              </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                placeholder="••••••••"
+                autoComplete="current-password"
                 required
               />
             </div>
+          </label>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 rounded-lg font-semibold hover:shadow-lg transition duration-200 disabled:opacity-50"
-            >
-              {isLoading ? 'Cargando...' : 'Iniciar Sesión'}
-            </button>
-          </form>
+          <button type="submit" className="btn btn-primary btn-md login-button" disabled={submitting}>
+            {submitting ? 'Ingresando…' : 'Ingresar a HomeIA'} {!submitting && <ChevronRight size={17} />}
+          </button>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-gray-600 mb-2">
-              <strong>Demo:</strong> Credenciales de prueba:
-            </p>
-            <p className="text-sm text-gray-700">
-              <span className="font-mono bg-white px-2 py-1 rounded">andrea@homeia.co</span>
-              {' / '}
-              <span className="font-mono bg-white px-2 py-1 rounded">HomeIA2025</span>
-            </p>
+          <div className="login-help">
+            <ShieldCheck size={15} /> Conexión segura y protegida · <Link href="/auth/forgot">¿Olvidaste tu contraseña?</Link>
           </div>
-        </div>
-
-        {/* Footer */}
-        <p className="text-center text-blue-100 mt-6">
-          © 2026 HomeIA. Todos los derechos reservados.
-        </p>
+        </form>
       </div>
     </div>
   );

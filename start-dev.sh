@@ -12,7 +12,7 @@ NC='\033[0m' # No Color
 
 # Iniciar Backend (Spring Boot)
 echo -e "${BLUE}📦 Iniciando Backend en puerto 8080...${NC}"
-mvn spring-boot:run > /tmp/homeIA-backend.log 2>&1 &
+./mvnw spring-boot:run > /tmp/homeIA-backend.log 2>&1 &
 BACKEND_PID=$!
 echo -e "${GREEN}✅ Backend iniciado (PID: $BACKEND_PID)${NC}"
 
@@ -36,9 +36,7 @@ echo "🔧 Backend:   http://localhost:8080"
 echo "📊 API Docs:  http://localhost:8080/swagger-ui.html"
 echo "📈 Metrics:   http://localhost:8080/actuator/prometheus"
 echo ""
-echo "🔐 Credenciales:"
-echo "   Email:    andrea@homeia.co"
-echo "   Password: HomeIA2025"
+echo "🔐 Primera vez: abre http://localhost:3000/setup para crear la casa y el administrador."
 echo ""
 echo "Logs:"
 echo "   Backend:  tail -f /tmp/homeIA-backend.log"
