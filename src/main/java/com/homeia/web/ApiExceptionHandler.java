@@ -30,7 +30,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler({MethodArgumentNotValidException.class})
     ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException e, HttpServletRequest request) {
         String message = e.getBindingResult().getFieldErrors().stream()
-                .map(f -> f.getField() + ": " + f.getDefaultMessage())
+                .map(f -> f.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         return body(HttpStatus.BAD_REQUEST, message, request);
     }

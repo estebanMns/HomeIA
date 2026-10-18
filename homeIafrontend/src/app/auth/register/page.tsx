@@ -23,6 +23,10 @@ export default function RegisterPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!form.fullName.trim()) {
+      setError('Escribe tu nombre completo');
+      return;
+    }
     if (form.password !== form.confirm) {
       setError('Las contraseñas no coinciden');
       return;
