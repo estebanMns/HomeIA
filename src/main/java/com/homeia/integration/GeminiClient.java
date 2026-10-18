@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,9 +20,8 @@ public class GeminiClient {
 
     public GeminiClient(HomeIaProperties properties) {
         this.properties = properties.gemini();
-        this.restClient = RestClient.builder()
-                .baseUrl(this.properties.baseUrl())
-                .build();
+        // Gemini puede tardar varios segundos en generar el plan; más de 20 s se trata como "no respondió"
+        this.restClient = HttpClients.withTimeouts(this.properties.baseUrl(), Duration.ofSeconds(5), Duration.ofSeconds(20));
     }
 
     public boolean configured() {

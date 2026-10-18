@@ -35,10 +35,12 @@ public class AutomationController {
     }
 
     public record SettingsDto(boolean enabled, int vacancyMinutes, int returnSensitivityPercent,
-                              double consumptionAlertWatts, int leakMinutes, Instant updatedAt) {
+                              double consumptionAlertWatts, int leakMinutes, int consumptionSustainedMinutes,
+                              int alertCooldownMinutes, Instant updatedAt) {
         static SettingsDto from(AutomationSettingsEntity s) {
             return new SettingsDto(s.isEnabled(), s.getVacancyMinutes(), s.getReturnSensitivityPercent(),
-                    s.getConsumptionAlertWatts(), s.getLeakMinutes(), s.getUpdatedAt());
+                    s.getConsumptionAlertWatts(), s.getLeakMinutes(), s.getConsumptionSustainedMinutes(),
+                    s.getAlertCooldownMinutes(), s.getUpdatedAt());
         }
     }
 
@@ -47,7 +49,9 @@ public class AutomationController {
             @Min(1) @Max(1440) int vacancyMinutes,
             @Min(1) @Max(100) int returnSensitivityPercent,
             @Min(1) double consumptionAlertWatts,
-            @Min(1) @Max(1440) int leakMinutes) {
+            @Min(1) @Max(1440) int leakMinutes,
+            @Min(1) @Max(240) Integer consumptionSustainedMinutes,
+            @Min(1) @Max(1440) Integer alertCooldownMinutes) {
     }
 
     public record ActionDto(UUID id, UUID roomId, UUID deviceId, ActionType actionType, String description,
@@ -70,7 +74,8 @@ public class AutomationController {
     public SettingsDto update(@AuthenticationPrincipal AuthPrincipal principal, @Valid @RequestBody SettingsBody body) {
         return SettingsDto.from(automationService.updateSettings(principal, new AutomationService.Settings(
                 body.enabled(), body.vacancyMinutes(), body.returnSensitivityPercent(),
-                body.consumptionAlertWatts(), body.leakMinutes())));
+                body.consumptionAlertWatts(), body.leakMinutes(), body.consumptionSustainedMinutes(),
+                body.alertCooldownMinutes())));
     }
 
     @PostMapping("/enable")

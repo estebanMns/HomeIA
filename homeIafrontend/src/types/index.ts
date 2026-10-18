@@ -56,6 +56,8 @@ export interface Device {
   lastStatusChangeAt?: string;
   lastSeenAt?: string;
   bluetoothId?: string;
+  /** Umbral propio de consumo excesivo; sin valor se usa el de la casa. */
+  consumptionAlertWatts?: number | null;
 }
 
 export type AlertSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
@@ -94,6 +96,10 @@ export interface AutomationSettings {
   returnSensitivityPercent: number;
   consumptionAlertWatts: number;
   leakMinutes: number;
+  /** Minutos que el consumo debe mantenerse sobre el umbral para alertar. */
+  consumptionSustainedMinutes: number;
+  /** Minutos sin repetir la misma alerta del mismo dispositivo. */
+  alertCooldownMinutes: number;
   updatedAt: string;
 }
 
