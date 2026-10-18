@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, ShieldCheck, Sparkles, TrendingDown } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { api, ApiError } from '@/services/api';
+import { ApiError } from '@/services/api';
 import { Badge, Logo } from '@/components/ui/Primitives';
 
 export default function LoginPage() {
@@ -23,17 +23,11 @@ export default function LoginPage() {
     }
   }, []);
 
+  // Si ya hay sesión guardada, no tiene sentido mostrar el login.
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       router.replace('/dashboard');
-      return;
     }
-    api
-      .setupStatus()
-      .then((s) => {
-        if (s.needsSetup) router.replace('/setup');
-      })
-      .catch(() => setError('No se pudo conectar con el servidor de HomeIA'));
   }, [isAuthenticated, isLoading, router]);
 
   const handleSubmit = async (e: FormEvent) => {
