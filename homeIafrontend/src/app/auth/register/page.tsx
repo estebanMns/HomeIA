@@ -34,7 +34,7 @@ export default function RegisterPage() {
         email: form.email.trim(),
         password: form.password,
       });
-      setSuccess(res.message);
+      setSuccess(res?.message || 'Cuenta creada. Ya puedes ingresar con tu correo y contraseña.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No se pudo crear la cuenta. Revisa tu conexión.');
     } finally {
