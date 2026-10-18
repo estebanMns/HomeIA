@@ -59,7 +59,7 @@ npm run dev
 
 ```
 Email:    andrea@homeia.co
-Password: HomeIA2025
+Password: <la que definiste en /setup>
 ```
 
 ## 🛠️ Tecnologías

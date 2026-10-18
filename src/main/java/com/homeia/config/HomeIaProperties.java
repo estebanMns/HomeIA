@@ -41,7 +41,7 @@ public record HomeIaProperties(
         }
     }
 
-    public record Gemini(String apiKey, String model, String baseUrl) {
+    public record Gemini(String apiKey, String model, String baseUrl, long decisionIntervalSeconds) {
 
         public boolean configured() {
             return apiKey != null && !apiKey.isBlank();

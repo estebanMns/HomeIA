@@ -39,9 +39,8 @@ GRANT ALL PRIVILEGES ON DATABASE homeIA TO homeIA;
 **Archivo: `src/main/resources/application-local.properties`**
 ```properties
 # Database local
-spring.datasource.url=jdbc:postgresql://localhost:5432/homeIA
-spring.datasource.username=homeIA
-spring.datasource.password=homeIA
+# Usa DATABASE_URL en .env (no escribas la contraseña aquí):
+# DATABASE_URL=postgresql://homeIA:<contraseña>@localhost:5432/homeIA
 
 # Docker Compose deshabilitado
 spring.docker.compose.enabled=false

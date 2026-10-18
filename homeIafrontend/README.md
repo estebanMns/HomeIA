@@ -44,9 +44,7 @@ src/
 
 ## 🔐 Autenticación
 
-**Credenciales Demo:**
-- Email: `andrea@homeia.co`
-- Contraseña: `HomeIA2025`
+**Acceso:** usa la cuenta que creaste en `/setup`. No guardes credenciales en este archivo.
 
 ## 📡 API Integration
 

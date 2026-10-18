@@ -6,12 +6,16 @@ import com.homeia.domain.AlertType;
 import com.homeia.domain.ConnectionStatus;
 import com.homeia.domain.PowerState;
 import com.homeia.integration.GeminiClient;
+import com.homeia.integration.Json;
 import com.homeia.persistence.AutomationActionEntity;
 import com.homeia.persistence.AutomationActionRepository;
 import com.homeia.persistence.AutomationSettingsEntity;
 import com.homeia.persistence.AutomationSettingsRepository;
 import com.homeia.persistence.DeviceEntity;
 import com.homeia.persistence.DeviceRepository;
+import com.homeia.persistence.EnergyReadingEntity;
+import com.homeia.persistence.EnergyReadingRepository;
+import com.homeia.persistence.HomeEntity;
 import com.homeia.persistence.PresenceEventEntity;
 import com.homeia.persistence.PresenceEventRepository;
 import com.homeia.persistence.RoomEntity;
@@ -25,11 +29,16 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,12 +47,19 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Motor de automatización por habitación:
+ * Motor de automatización por casa.
+ *
+ * Con Gemini configurado, la IA decide cada ciclo qué dispositivos encender, apagar o dejar como están
+ * ({@link AiEnergyPlanner}). Cada decisión pasa por guardarraíles en código: nunca se apaga un dispositivo
+ * crítico ni uno en una habitación ocupada, y nunca se enciende uno que ya está encendido.
+ * Si la IA no responde, se usan las reglas de respaldo:
  * 1. Si la habitación lleva "vacancyMinutes" sin presencia, apaga luces y tomacorrientes no críticos,
  *    salvo que la probabilidad de regreso supere la sensibilidad configurada.
  * 2. Si un dispositivo crítico sigue encendido en una habitación vacía durante "leakMinutes", alerta de posible fuga.
- * 3. Si un dispositivo supera "consumptionAlertWatts", alerta de consumo excesivo.
- * 4. Si un dispositivo deja de reportar, alerta de dispositivo sin conexión.
+ *
+ * En cualquier caso, el motor calcula el consumo de la última hora y su costo, y alerta si un dispositivo
+ * supera "consumptionAlertWatts" (las alertas de advertencia se envían por WhatsApp).
+ * Si un dispositivo deja de reportar, alerta de dispositivo sin conexión.
  */
 @Slf4j
 @Service
@@ -60,14 +76,21 @@ public class AutomationService {
     private final RoomRepository roomRepository;
     private final DeviceRepository deviceRepository;
     private final PresenceEventRepository presenceRepository;
+    private final EnergyReadingRepository energyRepository;
     private final DeviceService deviceService;
     private final AlertService alertService;
     private final RoomService roomService;
+    private final BillingService billingService;
+    private final AiEnergyPlanner aiPlanner;
     private final GeminiClient geminiClient;
     private final AuditService auditService;
     private final com.homeia.persistence.HomeRepository homeRepository;
 
     private final Map<UUID, Map.Entry<Instant, Double>> predictionCache = new HashMap<>();
+
+    /** Estado de una habitación según su último evento de presencia. known=false si nunca hubo eventos. */
+    private record RoomState(boolean known, boolean occupied, long vacantMinutes) {
+    }
 
     public record Settings(boolean enabled, int vacancyMinutes, int returnSensitivityPercent,
                            double consumptionAlertWatts, int leakMinutes) {
@@ -224,15 +247,51 @@ public class AutomationService {
     int runCycle(AutomationSettingsEntity settings, boolean manual) {
         UUID homeId = settings.getHomeId();
         Instant now = Instant.now();
-        int actions = 0;
-        // Apagados ya enviados que el dispositivo aún no confirma: no repetir el comando en cada ciclo.
-        Set<UUID> pendingShutdown = actionRepository.findByHomeIdAndCreatedAtAfter(homeId, now.minus(PENDING_COMMAND_WINDOW))
+        HomeEntity home = homeRepository.findById(homeId).orElseThrow();
+        ZoneId zone = ZoneId.of(home.getTimezone());
+
+        List<DeviceEntity> devices = deviceRepository.findByHomeIdOrderByNameAsc(homeId);
+        Map<UUID, RoomEntity> rooms = new LinkedHashMap<>();
+        roomRepository.findByHomeIdOrderByNameAsc(homeId).forEach(r -> rooms.put(r.getId(), r));
+        Map<UUID, RoomState> roomStates = roomStates(rooms.values(), now);
+        Map<UUID, Double> kwhLastHour = kwhLastHour(homeId, now);
+        // Comandos enviados que el dispositivo aún no confirma: no repetirlos en cada ciclo.
+        Set<UUID> pendingCommand = actionRepository.findByHomeIdAndCreatedAtAfter(homeId, now.minus(PENDING_COMMAND_WINDOW))
                 .stream()
-                .filter(a -> a.getActionType() == ActionType.SWITCHED_OFF_VACANT_ROOM && a.getDeviceId() != null)
+                .filter(a -> (a.getActionType() == ActionType.SWITCHED_OFF_VACANT_ROOM
+                        || a.getActionType() == ActionType.SWITCHED_ON_OCCUPIED_ROOM) && a.getDeviceId() != null)
                 .map(AutomationActionEntity::getDeviceId)
                 .collect(Collectors.toSet());
 
-        for (DeviceEntity device : deviceRepository.findByHomeIdOrderByNameAsc(homeId)) {
+        checkDevices(settings, home, zone, devices, kwhLastHour, now);
+
+        int actions = 0;
+        if (aiPlanner.enabled()) {
+            if (!manual && !aiPlanner.due(homeId, now)) {
+                return actions; // la IA decidió hace poco: se espera al siguiente intervalo
+            }
+            String snapshot = snapshot(settings, home, zone, devices, rooms, roomStates, kwhLastHour, now);
+            Set<UUID> knownIds = devices.stream().map(DeviceEntity::getId).collect(Collectors.toSet());
+            Optional<List<AiEnergyPlanner.Decision>> plan = aiPlanner.plan(homeId, snapshot, knownIds);
+            if (plan.isPresent()) {
+                actions += applyAiDecisions(homeId, devices, rooms, roomStates, plan.get(), pendingCommand);
+                return actions;
+            }
+            log.warn("La IA no respondió para la casa {}: se usan las reglas de respaldo", homeId);
+        }
+
+        actions += applyRules(settings, homeId, devices, rooms, roomStates, pendingCommand, now);
+        if (manual && actions == 0) {
+            log.info("Ciclo manual de automatización sin acciones para la casa {}", homeId);
+        }
+        return actions;
+    }
+
+    /** Dispositivos sin conexión y consumo excesivo, con su consumo de la última hora y costo estimado. */
+    private void checkDevices(AutomationSettingsEntity settings, HomeEntity home, ZoneId zone,
+                              List<DeviceEntity> devices, Map<UUID, Double> kwhLastHour, Instant now) {
+        UUID homeId = settings.getHomeId();
+        for (DeviceEntity device : devices) {
             if (device.getConnectionStatus() == ConnectionStatus.ONLINE
                     && device.getLastSeenAt() != null
                     && device.getLastSeenAt().isBefore(now.minus(OFFLINE_AFTER))) {
@@ -242,22 +301,79 @@ public class AutomationService {
             }
             if (device.getConnectionStatus() == ConnectionStatus.ONLINE
                     && device.getConsumptionWatts() > settings.getConsumptionAlertWatts()) {
+                double kwh = kwhLastHour.getOrDefault(device.getId(), 0.0);
+                BigDecimal cost = billingService.energyCost(homeId, BigDecimal.valueOf(kwh), now,
+                        home.getElectricityPricePerKwh(), zone).setScale(0, RoundingMode.HALF_UP);
                 alertService.raiseOnce(homeId, device.getId(), AlertType.EXCESSIVE_CONSUMPTION, AlertSeverity.WARNING,
                         "Consumo excesivo", device.getName() + " consume " + Math.round(device.getConsumptionWatts())
-                                + " W, por encima del umbral de " + Math.round(settings.getConsumptionAlertWatts()) + " W",
+                                + " W, por encima del umbral de " + Math.round(settings.getConsumptionAlertWatts())
+                                + " W. En la última hora: " + String.format("%.3f", kwh) + " kWh, costo estimado "
+                                + cost + " " + home.getCurrency(),
                         device.getRoomId());
             }
         }
+    }
 
-        for (RoomEntity room : roomRepository.findByHomeIdOrderByNameAsc(homeId)) {
-            Optional<PresenceEventEntity> latest = roomService.latestPresence(room.getId());
-            if (latest.isEmpty() || latest.get().isPresent()) {
+    /** Aplica el plan de la IA, validando cada decisión contra el estado real. Devuelve las acciones ejecutadas. */
+    private int applyAiDecisions(UUID homeId, List<DeviceEntity> devices, Map<UUID, RoomEntity> rooms,
+                                 Map<UUID, RoomState> roomStates, List<AiEnergyPlanner.Decision> decisions,
+                                 Set<UUID> pendingCommand) {
+        Map<UUID, DeviceEntity> byId = devices.stream().collect(Collectors.toMap(DeviceEntity::getId, d -> d));
+        int actions = 0;
+        for (AiEnergyPlanner.Decision decision : decisions) {
+            DeviceEntity device = byId.get(decision.deviceId());
+            if (device == null || !device.getType().switchable() || pendingCommand.contains(device.getId())) {
+                continue;
+            }
+            RoomEntity room = device.getRoomId() == null ? null : rooms.get(device.getRoomId());
+            RoomState state = room == null ? null : roomStates.get(room.getId());
+            if (state == null || !state.known()) {
+                continue; // sin datos de presencia no hay base para decidir
+            }
+
+            if ("OFF".equals(decision.action())) {
+                if (device.getPowerState() != PowerState.ON || device.isCritical() || state.occupied()) {
+                    continue; // guardarraíles: críticos y habitaciones ocupadas nunca se apagan
+                }
+                if (!deviceService.commandAutomatically(homeId, device.getId(), device.getName(), DeviceService.Command.OFF)) {
+                    log.warn("No se pudo apagar {} automáticamente: el broker MQTT no está disponible", device.getName());
+                    continue;
+                }
+                actionRepository.save(newAction(homeId, room.getId(), device.getId(), ActionType.SWITCHED_OFF_VACANT_ROOM,
+                        "IA apagó " + device.getName() + " en " + room.getName() + " (vacía hace " + state.vacantMinutes()
+                                + " min). Motivo: " + decision.reason(), device.getConsumptionWatts()));
+                alertService.raiseOnce(homeId, device.getId(), AlertType.AUTOMATIC_SHUTDOWN, AlertSeverity.INFO,
+                        "Apagado automático", device.getName() + " se apagó porque " + room.getName() + " está vacía",
+                        room.getId());
+                actions++;
+            } else if ("ON".equals(decision.action())) {
+                if (device.getPowerState() != PowerState.OFF || !state.occupied()) {
+                    continue; // guardarraíles: solo se enciende lo apagado en una habitación con presencia
+                }
+                if (!deviceService.commandAutomatically(homeId, device.getId(), device.getName(), DeviceService.Command.ON)) {
+                    log.warn("No se pudo encender {} automáticamente: el broker MQTT no está disponible", device.getName());
+                    continue;
+                }
+                actionRepository.save(newAction(homeId, room.getId(), device.getId(), ActionType.SWITCHED_ON_OCCUPIED_ROOM,
+                        "IA encendió " + device.getName() + " en " + room.getName() + " (hay presencia). Motivo: "
+                                + decision.reason(), 0));
+                actions++;
+            }
+        }
+        return actions;
+    }
+
+    /** Reglas de respaldo, usadas cuando la IA no está configurada o no respondió. */
+    private int applyRules(AutomationSettingsEntity settings, UUID homeId, List<DeviceEntity> devices,
+                           Map<UUID, RoomEntity> rooms, Map<UUID, RoomState> roomStates, Set<UUID> pendingCommand,
+                           Instant now) {
+        int actions = 0;
+        for (RoomEntity room : rooms.values()) {
+            RoomState state = roomStates.get(room.getId());
+            if (state == null || !state.known() || state.occupied()) {
                 continue; // sin historial o habitación ocupada: no se actúa
             }
-            Instant vacantSince = latest.get().getObservedAt();
-            long vacantMinutes = Duration.between(vacantSince, now).toMinutes();
-            List<DeviceEntity> roomDevices = deviceRepository.findByRoomId(room.getId());
-
+            long vacantMinutes = state.vacantMinutes();
             if (vacantMinutes < settings.getVacancyMinutes()) {
                 continue;
             }
@@ -267,9 +383,12 @@ public class AutomationService {
                 continue;
             }
 
-            for (DeviceEntity device : roomDevices) {
+            for (DeviceEntity device : devices) {
+                if (!room.getId().equals(device.getRoomId())) {
+                    continue;
+                }
                 if (device.getPowerState() != PowerState.ON || !device.getType().switchable()
-                        || pendingShutdown.contains(device.getId())) {
+                        || pendingCommand.contains(device.getId())) {
                     continue;
                 }
                 if (device.isCritical()) {
@@ -297,10 +416,72 @@ public class AutomationService {
                 actions++;
             }
         }
-        if (manual && actions == 0) {
-            log.info("Ciclo manual de automatización sin acciones para la casa {}", homeId);
-        }
         return actions;
+    }
+
+    /** Estado de presencia de cada habitación según su último evento. */
+    private Map<UUID, RoomState> roomStates(Collection<RoomEntity> rooms, Instant now) {
+        Map<UUID, RoomState> states = new HashMap<>();
+        for (RoomEntity room : rooms) {
+            Optional<PresenceEventEntity> latest = roomService.latestPresence(room.getId());
+            if (latest.isEmpty()) {
+                states.put(room.getId(), new RoomState(false, false, 0));
+                continue;
+            }
+            boolean occupied = latest.get().isPresent();
+            long vacantMinutes = occupied ? 0 : Duration.between(latest.get().getObservedAt(), now).toMinutes();
+            states.put(room.getId(), new RoomState(true, occupied, vacantMinutes));
+        }
+        return states;
+    }
+
+    /** kWh consumidos en la última hora por dispositivo, integrando las lecturas de potencia (regla del trapecio). */
+    private Map<UUID, Double> kwhLastHour(UUID homeId, Instant now) {
+        Map<UUID, Double> kwh = new HashMap<>();
+        EnergyReadingEntity previous = null;
+        for (EnergyReadingEntity reading : energyRepository
+                .findByHomeIdAndMeasuredAtBetweenOrderByDeviceIdAscMeasuredAtAsc(homeId, now.minus(Duration.ofHours(1)), now)) {
+            if (previous != null && previous.getDeviceId().equals(reading.getDeviceId())) {
+                double hours = Duration.between(previous.getMeasuredAt(), reading.getMeasuredAt()).toMillis() / 3_600_000.0;
+                double avgWatts = (previous.getWatts() + reading.getWatts()) / 2.0;
+                kwh.merge(reading.getDeviceId(), avgWatts / 1000.0 * hours, Double::sum);
+            }
+            previous = reading;
+        }
+        return kwh;
+    }
+
+    /** Estado de la casa en JSON para que la IA decida. Sin datos sensibles: solo lo necesario para decidir. */
+    private String snapshot(AutomationSettingsEntity settings, HomeEntity home, ZoneId zone, List<DeviceEntity> devices,
+                            Map<UUID, RoomEntity> rooms, Map<UUID, RoomState> roomStates, Map<UUID, Double> kwhLastHour,
+                            Instant now) {
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (DeviceEntity device : devices) {
+            RoomEntity room = device.getRoomId() == null ? null : rooms.get(device.getRoomId());
+            RoomState state = room == null ? null : roomStates.get(room.getId());
+            boolean known = state != null && state.known();
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("deviceId", device.getId().toString());
+            item.put("nombre", device.getName());
+            item.put("tipo", device.getType().name());
+            item.put("critico", device.isCritical());
+            item.put("encendido", device.getPowerState() == PowerState.ON);
+            item.put("conectado", device.getConnectionStatus() == ConnectionStatus.ONLINE);
+            item.put("vatios", Math.round(device.getConsumptionWatts()));
+            item.put("kwh_ultima_hora", Math.round(kwhLastHour.getOrDefault(device.getId(), 0.0) * 1000) / 1000.0);
+            item.put("habitacion", room == null ? "sin habitación" : room.getName());
+            item.put("habitacion_ocupada", known ? state.occupied() : null);
+            item.put("minutos_sin_presencia", known && !state.occupied() ? state.vacantMinutes() : null);
+            items.add(item);
+        }
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("hora_local", ZonedDateTime.ofInstant(now, zone).toString());
+        root.put("moneda", home.getCurrency());
+        root.put("precio_kwh", home.getElectricityPricePerKwh());
+        root.put("minutos_minimos_para_considerar_vacia", settings.getVacancyMinutes());
+        root.put("umbral_consumo_vatios", settings.getConsumptionAlertWatts());
+        root.put("dispositivos", items);
+        return Json.write(root);
     }
 
     private int recordOnce(UUID homeId, RoomEntity room, DeviceEntity device, ActionType type, String description,

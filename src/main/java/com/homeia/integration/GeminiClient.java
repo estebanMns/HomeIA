@@ -1,5 +1,6 @@
 package com.homeia.integration;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.homeia.config.HomeIaProperties;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -49,6 +50,25 @@ public class GeminiClient {
         String text = Json.read(response).path("candidates").path(0).path("content").path("parts")
                 .path(0).path("text").asText("").trim();
         return parseProbability(text);
+    }
+
+    /** Pide a Gemini una respuesta en JSON. Vacío si el modelo no devolvió texto. Lanza excepción si el HTTP falla. */
+    public Optional<JsonNode> generateJson(String prompt) {
+        String payload = Json.write(Map.of(
+                "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
+                "generationConfig", Map.of("temperature", 0, "responseMimeType", "application/json")));
+
+        String response = restClient.post()
+                .uri("/models/{model}:generateContent", properties.model())
+                .header("x-goog-api-key", properties.apiKey())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(payload)
+                .retrieve()
+                .body(String.class);
+
+        String text = Json.read(response).path("candidates").path(0).path("content").path("parts")
+                .path(0).path("text").asText("").trim();
+        return text.isEmpty() ? Optional.empty() : Optional.of(Json.read(text));
     }
 
     static Optional<Double> parseProbability(String text) {

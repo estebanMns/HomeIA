@@ -108,6 +108,7 @@ export interface AutomationStatus {
 
 export type ActionType =
   | 'SWITCHED_OFF_VACANT_ROOM'
+  | 'SWITCHED_ON_OCCUPIED_ROOM'
   | 'MANUAL_SHUTDOWN'
   | 'PROTECTED_CRITICAL_DEVICE'
   | 'KEPT_ON_LIKELY_RETURN';

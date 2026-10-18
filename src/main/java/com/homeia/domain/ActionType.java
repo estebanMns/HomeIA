@@ -3,6 +3,8 @@ package com.homeia.domain;
 public enum ActionType {
     /** La IA apagó dispositivos de una habitación vacía. */
     SWITCHED_OFF_VACANT_ROOM,
+    /** La IA encendió un dispositivo apagado en una habitación con presencia. */
+    SWITCHED_ON_OCCUPIED_ROOM,
     /** Un usuario ejecutó el apagado manualmente desde la API. */
     MANUAL_SHUTDOWN,
     /** La IA decidió mantener encendido un dispositivo crítico. */

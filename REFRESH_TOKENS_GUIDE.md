@@ -112,8 +112,8 @@ public class RefreshTokenEntity {
 ```json
 // Request
 {
-  "email": "andrea@homeia.co",
-  "password": "HomeIA2025",
+  "email": "tu-correo@ejemplo.com",
+  "password": "<tu-contraseña>",
   "ipAddress": "192.168.1.1"
 }
 
@@ -216,8 +216,8 @@ async function login() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'andrea@homeia.co',
-      password: 'HomeIA2025',
+      email: process.env.HOMEIA_EMAIL,
+      password: process.env.HOMEIA_PASSWORD,
       ipAddress: '192.168.1.1'
     })
   });

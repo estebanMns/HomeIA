@@ -26,7 +26,7 @@ Se ha completado la implementación de:
 - **POST /api/auth/login**
   - Body: `{ "email": "string", "password": "string", "ipAddress": "string" }`
   - Response: `{ "token": "jwt", "userId": "string", "email": "string", "expiresIn": 86400 }`
-  - Usuario demo: `andrea@homeia.co` / `HomeIA2025`
+  - Usuario: el que creaste en `/setup` (correo y contraseña en tus notas, nunca en el repo)
   - Auditoría: LOGIN_SUCCESS / LOGIN_FAILED
 
 - **POST /api/auth/logout**
@@ -265,14 +265,13 @@ jwt.expiration=3600000  # 1 hora en ms
 # MQTT
 mqtt.enabled=true
 mqtt.broker-url=tcp://broker.ejemplo.com:1883
-mqtt.username=usuario_real
-mqtt.password=contraseña_real
-mqtt.client-id=homeIA-prod
+# Estos valores van en .env (o variables de entorno), nunca escritos en el código
+homeia.mqtt.username=${MQTT_USERNAME}
+homeia.mqtt.password=${MQTT_PASSWORD}
+homeia.mqtt.client-id=homeIA-prod
 
-# Database
-spring.datasource.url=jdbc:postgresql://prod-db:5432/homeIA
-spring.datasource.username=prod_user
-spring.datasource.password=<contraseña_fuerte>
+# Database: solo DATABASE_URL en .env
+# DATABASE_URL=postgresql://<usuario>:<contraseña>@<host>:5432/<base>
 
 # Logging
 logging.level.com.home.ia=INFO
