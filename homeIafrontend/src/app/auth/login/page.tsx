@@ -15,6 +15,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [info, setInfo] = useState('');
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('registered') === '1') {
+      setInfo('Cuenta creada. Ingresa con tu correo y contraseña.');
+    }
+  }, []);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -74,6 +81,12 @@ export default function LoginPage() {
           </div>
           <div className="detail-title">Bienvenido de nuevo</div>
           <p>Ingresa para ver cómo está ahorrando tu hogar.</p>
+
+          {info && (
+            <div className="card" style={{ margin: '14px 0', color: 'var(--green)', borderColor: 'var(--green)' }}>
+              {info}
+            </div>
+          )}
 
           {error && (
             <div className="card" style={{ margin: '14px 0', color: 'var(--red)', borderColor: 'var(--red)' }}>

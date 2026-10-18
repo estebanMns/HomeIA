@@ -1,19 +1,24 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, ShieldCheck } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { ApiError } from '@/services/api';
+import { api, ApiError } from '@/services/api';
 import { Logo } from '@/components/ui/Primitives';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register } = useAuth();
   const [form, setForm] = useState({ fullName: '', email: '', password: '', confirm: '' });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => router.replace('/auth/login?registered=1'), 2500);
+    return () => clearTimeout(timer);
+  }, [success, router]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -24,14 +29,37 @@ export default function RegisterPage() {
     }
     setSubmitting(true);
     try {
-      await register(form.fullName.trim(), form.email.trim(), form.password);
-      router.push('/dashboard');
+      const res = await api.register({
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        password: form.password,
+      });
+      setSuccess(res.message);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No se pudo crear la cuenta. Revisa tu conexión.');
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (success) {
+    return (
+      <div className="login-page">
+        <div className="login-form-wrap">
+          <div className="login-form">
+            <div className="detail-title">¡Cuenta creada!</div>
+            <div className="card" style={{ margin: '14px 0', color: 'var(--green)', borderColor: 'var(--green)' }}>
+              {success}
+            </div>
+            <p>Te llevamos a la pantalla de ingreso…</p>
+            <Link href="/auth/login?registered=1" className="btn btn-primary btn-md login-button">
+              Ir a ingresar
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="login-page">

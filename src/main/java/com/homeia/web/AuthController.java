@@ -30,7 +30,10 @@ public class AuthController {
     public record LoginRequest(@NotBlank String email, @NotBlank String password) {
     }
 
-    public record RegisterBody(@NotBlank String fullName, @NotBlank String email, @NotBlank String password) {
+    public record RegisterBody(
+            @NotBlank(message = "El nombre es obligatorio") String fullName,
+            @NotBlank(message = "El correo es obligatorio") String email,
+            @NotBlank(message = "La contraseña es obligatoria") String password) {
     }
 
     public record TokenRequest(@NotBlank String refreshToken) {
@@ -60,11 +63,11 @@ public class AuthController {
         return session(authService.login(request.email(), request.password()));
     }
 
-    /** Crea una cuenta con su propia casa y devuelve la sesión, como el login. */
+    /** Crea la cuenta con su propia casa. No inicia sesión: el usuario debe ingresar desde el login. */
     @PostMapping("/register")
     public Map<String, Object> register(@Valid @RequestBody RegisterBody body) {
         setupService.register(body.fullName(), body.email(), body.password());
-        return session(authService.login(body.email(), body.password()));
+        return Map.of("message", "Cuenta creada. Ya puedes ingresar con tu correo y contraseña.");
     }
 
     @PostMapping("/refresh")
