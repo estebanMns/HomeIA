@@ -158,6 +158,8 @@ export const api = {
   setupStatus: () => request<{ needsSetup: boolean }>('GET', '/setup/status'),
   setup: (body: unknown) => request<{ homeId: string; name: string }>('POST', '/setup', body),
   login: (email: string, password: string) => request<Session>('POST', '/auth/login', { email, password }),
+  register: (body: { fullName: string; email: string; password: string }) =>
+    request<Session>('POST', '/auth/register', body),
   logout: (refreshToken: string) => request<{ success: boolean }>('POST', '/auth/logout', { refreshToken }),
   forgotPassword: (email: string) => request<{ message: string }>('POST', '/auth/password/forgot', { email }),
   resetPassword: (token: string, newPassword: string) =>

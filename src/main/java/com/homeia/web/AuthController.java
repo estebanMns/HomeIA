@@ -3,6 +3,8 @@ package com.homeia.web;
 import com.homeia.persistence.UserEntity;
 import com.homeia.service.AuthService;
 import com.homeia.service.PasswordResetService;
+import com.homeia.service.SetupService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,13 +19,18 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
+    private final SetupService setupService;
 
-    public AuthController(AuthService authService, PasswordResetService passwordResetService) {
+    public AuthController(AuthService authService, PasswordResetService passwordResetService, SetupService setupService) {
         this.authService = authService;
         this.passwordResetService = passwordResetService;
+        this.setupService = setupService;
     }
 
     public record LoginRequest(@NotBlank String email, @NotBlank String password) {
+    }
+
+    public record RegisterBody(@NotBlank String fullName, @NotBlank String email, @NotBlank String password) {
     }
 
     public record TokenRequest(@NotBlank String refreshToken) {
@@ -51,6 +58,13 @@ public class AuthController {
     @PostMapping("/login")
     public Map<String, Object> login(@RequestBody LoginRequest request) {
         return session(authService.login(request.email(), request.password()));
+    }
+
+    /** Crea una cuenta con su propia casa y devuelve la sesión, como el login. */
+    @PostMapping("/register")
+    public Map<String, Object> register(@Valid @RequestBody RegisterBody body) {
+        setupService.register(body.fullName(), body.email(), body.password());
+        return session(authService.login(body.email(), body.password()));
     }
 
     @PostMapping("/refresh")

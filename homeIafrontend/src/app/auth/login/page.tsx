@@ -107,6 +107,9 @@ export default function LoginPage() {
           <div className="login-help">
             <ShieldCheck size={15} /> Conexión segura y protegida · <Link href="/auth/forgot">¿Olvidaste tu contraseña?</Link>
           </div>
+          <div className="login-help">
+            ¿No tienes cuenta? <Link href="/auth/register">Crear cuenta</Link>
+          </div>
         </form>
       </div>
     </div>
