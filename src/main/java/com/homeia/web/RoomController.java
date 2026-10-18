@@ -5,6 +5,7 @@ import com.homeia.security.AuthPrincipal;
 import com.homeia.service.RoomService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,23 +48,27 @@ public class RoomController {
         return RoomDto.from(roomService.get(principal.homeId(), id));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public RoomDto create(@AuthenticationPrincipal AuthPrincipal principal, @Valid @RequestBody RoomBody body) {
         return RoomDto.from(roomService.create(principal, body.name(), body.location()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public RoomDto update(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id,
                           @RequestBody UpdateRoomBody body) {
         return RoomDto.from(roomService.update(principal, id, body.name(), body.location()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public void delete(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id) {
         roomService.delete(principal, id);
     }
 
     /** Registro manual de presencia (p. ej. desde un sensor o un botón de la app). */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/presence")
     public void presence(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id,
                          @RequestBody PresenceBody body) {

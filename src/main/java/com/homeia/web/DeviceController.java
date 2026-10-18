@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import com.homeia.integration.Json;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,7 +50,7 @@ public class DeviceController {
     public record UpdateDeviceBody(String name, UUID roomId, boolean clearRoom, Boolean critical) {
     }
 
-    public record CommandBody(@NotNull DeviceService.Command command, Integer brightness) {
+    public record CommandBody(@NotNull DeviceService.Command command, Integer brightness, boolean confirmCritical) {
     }
 
     @GetMapping
@@ -65,11 +66,13 @@ public class DeviceController {
         return DeviceDto.from(deviceService.get(principal.homeId(), id));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public DeviceDto create(@AuthenticationPrincipal AuthPrincipal principal, @Valid @RequestBody DeviceBody body) {
         return DeviceDto.from(deviceService.create(principal, body.name(), body.type(), body.roomId(), body.critical()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public DeviceDto update(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id,
                             @RequestBody UpdateDeviceBody body) {
@@ -77,12 +80,14 @@ public class DeviceController {
                 body.critical()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public void delete(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id) {
         deviceService.delete(principal, id);
     }
 
     /** Registra (o vincula, si ya existe) un dispositivo descubierto por Bluetooth. */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/bluetooth")
     public DeviceDto registerBluetooth(@AuthenticationPrincipal AuthPrincipal principal,
                                        @Valid @RequestBody BluetoothBody body) {
@@ -94,6 +99,7 @@ public class DeviceController {
      * Estado reportado desde la app por Bluetooth, con el mismo formato que el MQTT:
      * {"powerState":"ON","consumptionWatts":12.5,"brightness":80,"presence":true}
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/state")
     public DeviceDto reportState(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id,
                                  @RequestBody Map<String, Object> body) {
@@ -104,6 +110,7 @@ public class DeviceController {
     @PostMapping("/{id}/commands")
     public DeviceDto command(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id,
                              @Valid @RequestBody CommandBody body) {
-        return DeviceDto.from(deviceService.command(principal, id, body.command(), body.brightness()));
+        return DeviceDto.from(deviceService.command(principal, id, body.command(), body.brightness(),
+                body.confirmCritical()));
     }
 }

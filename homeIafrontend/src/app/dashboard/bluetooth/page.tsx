@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useRef, useState, useSyncExternalStore } from 're
 import { BluetoothConnected, Power, PowerOff, Search, Unplug } from 'lucide-react';
 import { api, ApiError } from '@/services/api';
 import { useAsync } from '@/hooks/useAsync';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   BleSession,
   connectDevice,
@@ -25,6 +26,7 @@ const typeLabel: Record<DeviceType, string> = {
 };
 
 export default function BluetoothPage() {
+  const { user } = useAuth();
   const supported = isBluetoothSupported();
   const sessions = useSyncExternalStore(subscribeBle, getBleSessions, getBleSessions);
   const { data, error, reload } = useAsync<{ devices: Device[]; rooms: Room[] }>(async () => {
@@ -56,6 +58,16 @@ export default function BluetoothPage() {
   };
 
   const registeredFor = (bluetoothId: string) => data?.devices.find((d) => d.bluetoothId === bluetoothId);
+
+  // Vincular dispositivos y reportar su estado alimenta las decisiones de la IA: solo el administrador.
+  if (user?.role !== 'ADMIN') {
+    return (
+      <div className="page-content">
+        <SectionTitle title="Dispositivos Bluetooth" subtitle="Vinculación de dispositivos" />
+        <Card className="muted">Solo el administrador de la casa puede vincular dispositivos por Bluetooth.</Card>
+      </div>
+    );
+  }
 
   return (
     <div className="page-content">

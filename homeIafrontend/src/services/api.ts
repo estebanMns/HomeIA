@@ -190,8 +190,9 @@ export const api = {
   updateDevice: (id: string, body: { name?: string; roomId?: string; clearRoom?: boolean; critical?: boolean }) =>
     request<Device>('PUT', `/devices/${id}`, body),
   deleteDevice: (id: string) => request<void>('DELETE', `/devices/${id}`),
-  deviceCommand: (id: string, command: DeviceCommand, brightness?: number) =>
-    request<Device>('POST', `/devices/${id}/commands`, { command, brightness }),
+  /** confirmCritical: el backend exige confirmación explícita para apagar un dispositivo crítico. */
+  deviceCommand: (id: string, command: DeviceCommand, brightness?: number, confirmCritical = false) =>
+    request<Device>('POST', `/devices/${id}/commands`, { command, brightness, confirmCritical }),
   registerBluetoothDevice: (body: {
     bluetoothId: string;
     name: string;

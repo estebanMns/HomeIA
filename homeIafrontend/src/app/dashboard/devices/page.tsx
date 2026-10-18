@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from 'react';
 import { Lightbulb, Plug, Plus, Radio, Search, ShieldCheck, Trash2, Wifi, WifiOff } from 'lucide-react';
 import { api, ApiError } from '@/services/api';
 import { useAsync } from '@/hooks/useAsync';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Device, DeviceType, Room } from '@/types';
 import { Badge, Button, Card, SectionTitle, Switch } from '@/components/ui/Primitives';
 
@@ -19,6 +20,8 @@ interface Data {
 }
 
 export default function DevicesPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const { data, error, loading, reload } = useAsync<Data>(async () => {
     const [devices, rooms] = await Promise.all([api.devices(), api.rooms()]);
     return { devices, rooms };
@@ -52,6 +55,21 @@ export default function DevicesPage() {
     }
   };
 
+  /** Reglas del backend: solo el admin apaga tomacorrientes y apagar un crítico requiere confirmación. */
+  const togglePower = (d: Device) => {
+    const turningOff = d.powerState === 'ON';
+    if (!turningOff) {
+      run(d.id, () => api.deviceCommand(d.id, 'ON'), 'Comando de encendido enviado');
+      return;
+    }
+    if (d.critical && !window.confirm(
+      `${d.name} es un dispositivo crítico y está protegido. Si lo apagas podrías interrumpir un servicio esencial de la casa. ¿Apagarlo de todas formas?`,
+    )) {
+      return;
+    }
+    run(d.id, () => api.deviceCommand(d.id, 'OFF', undefined, d.critical), 'Comando de apagado enviado');
+  };
+
   const create = (e: FormEvent) => {
     e.preventDefault();
     run(null, async () => {
@@ -76,6 +94,7 @@ export default function DevicesPage() {
         <Card style={{ marginBottom: 16, color: error ? 'var(--red)' : 'var(--text)' }}>{error || message}</Card>
       )}
 
+      {isAdmin && (
       <Card style={{ marginBottom: 16 }}>
         <form onSubmit={create} className="filter-row" style={{ marginBottom: 0, flexWrap: 'wrap' }}>
           <div className="search grow">
@@ -98,6 +117,7 @@ export default function DevicesPage() {
           <button type="submit" className="btn btn-primary btn-md"><Plus size={16} /> Registrar</button>
         </form>
       </Card>
+      )}
 
       <Card className="filter-card">
         <div className="search grow">
@@ -134,6 +154,8 @@ export default function DevicesPage() {
               const online = d.connectionStatus === 'ONLINE';
               const on = d.powerState === 'ON';
               const controllable = d.type !== 'PRESENCE_SENSOR';
+              // Un miembro puede encender un tomacorriente, pero no deshabilitarlo.
+              const blockedForMember = !isAdmin && d.type === 'SMART_OUTLET' && on;
               return (
                 <div className={`table-row ${!online ? 'offline' : ''}`} key={d.id}>
                   <div className="device-name">
@@ -150,11 +172,13 @@ export default function DevicesPage() {
                   <span>{typeLabel[d.type]}</span>
                   <span>{d.roomId ? roomName.get(d.roomId) ?? '—' : 'Sin habitación'}</span>
                   <div>
-                    <Switch
-                      checked={on}
-                      disabled={!online || !controllable || busyId === d.id}
-                      onChange={() => run(d.id, () => api.deviceCommand(d.id, on ? 'OFF' : 'ON'), on ? 'Comando de apagado enviado' : 'Comando de encendido enviado')}
-                    />
+                    <span title={blockedForMember ? 'Solo el administrador puede deshabilitar tomacorrientes' : undefined}>
+                      <Switch
+                        checked={on}
+                        disabled={!online || !controllable || blockedForMember || busyId === d.id}
+                        onChange={() => togglePower(d)}
+                      />
+                    </span>
                   </div>
                   <Badge tone={online ? 'green' : 'gray'}>
                     {online ? <Wifi size={12} /> : <WifiOff size={12} />} {online ? 'En línea' : 'Sin conexión'}
@@ -173,16 +197,20 @@ export default function DevicesPage() {
                   ) : (
                     <span className="muted">—</span>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    disabled={busyId === d.id}
-                    onClick={() => {
-                      if (window.confirm(`¿Eliminar ${d.name}?`)) run(d.id, () => api.deleteDevice(d.id), 'Dispositivo eliminado');
-                    }}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
+                  {isAdmin ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={busyId === d.id}
+                      onClick={() => {
+                        if (window.confirm(`¿Eliminar ${d.name}?`)) run(d.id, () => api.deleteDevice(d.id), 'Dispositivo eliminado');
+                      }}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  ) : (
+                    <span />
+                  )}
                 </div>
               );
             })

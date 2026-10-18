@@ -158,8 +158,19 @@ public class DeviceService {
      * propio dispositivo reporta el cambio: no se asume éxito antes de confirmación.
      */
     @Transactional
-    public DeviceEntity command(AuthPrincipal principal, UUID deviceId, Command command, Integer brightness) {
+    public DeviceEntity command(AuthPrincipal principal, UUID deviceId, Command command, Integer brightness,
+                                boolean confirmCritical) {
         DeviceEntity device = get(principal.homeId(), deviceId);
+        boolean turnsOff = command == Command.OFF
+                || (command == Command.TOGGLE && device.getPowerState() == PowerState.ON);
+        DeviceCommandPolicy.Verdict verdict = DeviceCommandPolicy.evaluate(principal.isAdmin(), device.getType(),
+                device.isCritical(), device.getName(), command != Command.STATUS, turnsOff, confirmCritical);
+        switch (verdict.outcome()) {
+            case INVALID -> throw ApiException.badRequest(verdict.message());
+            case FORBIDDEN -> throw ApiException.forbidden(verdict.message());
+            case NEEDS_CONFIRMATION -> throw ApiException.conflict(verdict.message());
+            case ALLOWED -> { }
+        }
         if (command == Command.BRIGHTNESS && (brightness == null || brightness < 0 || brightness > 100)) {
             throw ApiException.badRequest("El brillo debe estar entre 0 y 100");
         }
@@ -186,7 +197,8 @@ public class DeviceService {
             throw ApiException.unavailable(e.getMessage());
         }
         auditService.record(principal, "DEVICE_COMMAND", "DEVICE", deviceId.toString(),
-                command.name() + (brightness != null ? " " + brightness + "%" : ""));
+                command.name() + (brightness != null ? " " + brightness + "%" : "")
+                        + (turnsOff && device.isCritical() ? " (crítico, confirmado)" : ""));
         return device;
     }
 
