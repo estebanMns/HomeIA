@@ -50,4 +50,8 @@ public class WhatsAppMessageEntity {
 
     @Column(name = "sent_at")
     private Instant sentAt;
+
+    /** Cuándo puede hacerse el siguiente intento de envío (cola con reintentos). */
+    @Column(name = "next_attempt_at")
+    private Instant nextAttemptAt;
 }

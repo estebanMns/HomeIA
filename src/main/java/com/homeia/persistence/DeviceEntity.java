@@ -52,6 +52,10 @@ public class DeviceEntity {
     @Column(name = "consumption_watts", nullable = false)
     private double consumptionWatts;
 
+    /** Umbral propio de consumo excesivo. Null = se usa el umbral global de la casa. */
+    @Column(name = "consumption_alert_watts")
+    private Double consumptionAlertWatts;
+
     @Column(nullable = false)
     private boolean critical;
 

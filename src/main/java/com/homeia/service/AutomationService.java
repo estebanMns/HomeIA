@@ -52,14 +52,16 @@ import java.util.stream.Collectors;
  * Con Gemini configurado, la IA decide cada ciclo qué dispositivos encender, apagar o dejar como están
  * ({@link AiEnergyPlanner}). Cada decisión pasa por guardarraíles en código: nunca se apaga un dispositivo
  * crítico ni uno en una habitación ocupada, y nunca se enciende uno que ya está encendido.
- * Si la IA no responde, se usan las reglas de respaldo:
- * 1. Si la habitación lleva "vacancyMinutes" sin presencia, apaga luces y tomacorrientes no críticos,
- *    salvo que la probabilidad de regreso supere la sensibilidad configurada.
- * 2. Si un dispositivo crítico sigue encendido en una habitación vacía durante "leakMinutes", alerta de posible fuga.
+ * Si la IA no responde, se usan las reglas de respaldo: si la habitación lleva "vacancyMinutes" sin presencia,
+ * apaga luces y tomacorrientes no críticos, salvo que la probabilidad de regreso supere la sensibilidad configurada.
  *
- * En cualquier caso, el motor calcula el consumo de la última hora y su costo, y alerta si un dispositivo
- * supera "consumptionAlertWatts" (las alertas de advertencia se envían por WhatsApp).
- * Si un dispositivo deja de reportar, alerta de dispositivo sin conexión.
+ * En cualquier caso (con o sin IA), en cada ciclo el motor revisa los dispositivos:
+ * - Sin conexión: alerta si un dispositivo deja de reportar.
+ * - Consumo excesivo: alerta si el consumo se mantiene en o sobre el umbral (del dispositivo o de la casa)
+ *   durante "consumptionSustainedMinutes" ({@link ExcessiveConsumptionPolicy}).
+ * - Posible fuga: alerta si con la habitación vacía "leakMinutes" el consumo es anómalo frente a su línea base
+ *   de esa misma hora ({@link LeakDetectionPolicy}).
+ * Las alertas repetidas respetan el enfriamiento configurado y las de advertencia o críticas se envían por WhatsApp.
  */
 @Slf4j
 @Service
@@ -85,6 +87,7 @@ public class AutomationService {
     private final GeminiClient geminiClient;
     private final AuditService auditService;
     private final com.homeia.persistence.HomeRepository homeRepository;
+    private final ConsumptionBaselineService baselineService;
 
     private final ReturnProbabilityCache predictionCache = new ReturnProbabilityCache(PREDICTION_TTL);
 
@@ -92,8 +95,10 @@ public class AutomationService {
     private record RoomState(boolean known, boolean occupied, long vacantMinutes) {
     }
 
+    /** consumptionSustainedMinutes y alertCooldownMinutes son opcionales: null conserva el valor actual. */
     public record Settings(boolean enabled, int vacancyMinutes, int returnSensitivityPercent,
-                           double consumptionAlertWatts, int leakMinutes) {
+                           double consumptionAlertWatts, int leakMinutes, Integer consumptionSustainedMinutes,
+                           Integer alertCooldownMinutes) {
     }
 
     public record Status(boolean enabled, long decisionsLast24h, long actionsTotal, Instant lastDecisionAt,
@@ -117,10 +122,18 @@ public class AutomationService {
         entity.setReturnSensitivityPercent(input.returnSensitivityPercent());
         entity.setConsumptionAlertWatts(input.consumptionAlertWatts());
         entity.setLeakMinutes(input.leakMinutes());
+        if (input.consumptionSustainedMinutes() != null) {
+            entity.setConsumptionSustainedMinutes(input.consumptionSustainedMinutes());
+        }
+        if (input.alertCooldownMinutes() != null) {
+            entity.setAlertCooldownMinutes(input.alertCooldownMinutes());
+        }
         entity.setUpdatedAt(Instant.now());
         auditService.record(principal, "AUTOMATION_SETTINGS_UPDATED", "AUTOMATION", principal.homeId().toString(),
                 "vacancy=" + input.vacancyMinutes() + "min, sensibilidad=" + input.returnSensitivityPercent()
-                        + "%, umbral=" + input.consumptionAlertWatts() + "W, fuga=" + input.leakMinutes() + "min");
+                        + "%, umbral=" + input.consumptionAlertWatts() + "W durante "
+                        + entity.getConsumptionSustainedMinutes() + "min, fuga=" + input.leakMinutes()
+                        + "min, enfriamiento=" + entity.getAlertCooldownMinutes() + "min");
         return entity;
     }
 
@@ -257,7 +270,7 @@ public class AutomationService {
                 .map(AutomationActionEntity::getDeviceId)
                 .collect(Collectors.toSet());
 
-        checkDevices(settings, home, zone, devices, kwhLastHour, now);
+        checkDevices(settings, home, zone, devices, roomStates, kwhLastHour, now);
 
         int actions = 0;
         if (aiPlanner.enabled()) {
@@ -282,9 +295,13 @@ public class AutomationService {
         return actions;
     }
 
-    /** Dispositivos sin conexión y consumo excesivo, con su consumo de la última hora y costo estimado. */
+    /**
+     * Revisión de dispositivos en cada ciclo, con o sin IA: sin conexión, consumo excesivo sostenido y posible fuga.
+     * Antes la detección de fugas vivía solo en las reglas de respaldo y desaparecía cuando Gemini respondía.
+     */
     private void checkDevices(AutomationSettingsEntity settings, HomeEntity home, ZoneId zone,
-                              List<DeviceEntity> devices, Map<UUID, Double> kwhLastHour, Instant now) {
+                              List<DeviceEntity> devices, Map<UUID, RoomState> roomStates,
+                              Map<UUID, Double> kwhLastHour, Instant now) {
         UUID homeId = settings.getHomeId();
         for (DeviceEntity device : devices) {
             if (device.getConnectionStatus() == ConnectionStatus.ONLINE
@@ -294,19 +311,62 @@ public class AutomationService {
                 alertService.raiseOnce(homeId, device.getId(), AlertType.DEVICE_OFFLINE, AlertSeverity.INFO,
                         "Dispositivo sin conexión", device.getName() + " dejó de reportar su estado", device.getRoomId());
             }
-            if (device.getConnectionStatus() == ConnectionStatus.ONLINE
-                    && device.getConsumptionWatts() > settings.getConsumptionAlertWatts()) {
-                double kwh = kwhLastHour.getOrDefault(device.getId(), 0.0);
-                BigDecimal cost = billingService.energyCost(homeId, BigDecimal.valueOf(kwh), now,
-                        home.getElectricityPricePerKwh(), zone).setScale(0, RoundingMode.HALF_UP);
-                alertService.raiseOnce(homeId, device.getId(), AlertType.EXCESSIVE_CONSUMPTION, AlertSeverity.WARNING,
-                        "Consumo excesivo", device.getName() + " consume " + Math.round(device.getConsumptionWatts())
-                                + " W, por encima del umbral de " + Math.round(settings.getConsumptionAlertWatts())
-                                + " W. En la última hora: " + String.format("%.3f", kwh) + " kWh, costo estimado "
-                                + cost + " " + home.getCurrency(),
-                        device.getRoomId());
+            if (device.getConnectionStatus() != ConnectionStatus.ONLINE || !device.getType().switchable()) {
+                continue;
             }
+            checkExcessiveConsumption(settings, home, zone, device, kwhLastHour, now);
+            checkPossibleLeak(settings, zone, device, roomStates, now);
         }
+    }
+
+    private void checkExcessiveConsumption(AutomationSettingsEntity settings, HomeEntity home, ZoneId zone,
+                                           DeviceEntity device, Map<UUID, Double> kwhLastHour, Instant now) {
+        double threshold = ExcessiveConsumptionPolicy.thresholdFor(device.getConsumptionAlertWatts(),
+                settings.getConsumptionAlertWatts());
+        if (device.getConsumptionWatts() < threshold) {
+            return; // filtro barato: si ahora no está sobre el umbral, no hace falta leer su historial
+        }
+        Duration sustained = Duration.ofMinutes(Math.max(1, settings.getConsumptionSustainedMinutes()));
+        List<ExcessiveConsumptionPolicy.Sample> samples = energyRepository
+                .findByDeviceIdAndMeasuredAtBetweenOrderByMeasuredAtAsc(device.getId(),
+                        now.minus(sustained).minus(Duration.ofHours(1)), now)
+                .stream()
+                .map(r -> new ExcessiveConsumptionPolicy.Sample(r.getMeasuredAt(), r.getWatts()))
+                .toList();
+        if (!ExcessiveConsumptionPolicy.isSustained(samples, now, threshold, sustained)) {
+            return;
+        }
+        UUID homeId = settings.getHomeId();
+        double kwh = kwhLastHour.getOrDefault(device.getId(), 0.0);
+        BigDecimal cost = billingService.energyCost(homeId, BigDecimal.valueOf(kwh), now,
+                home.getElectricityPricePerKwh(), zone).setScale(0, RoundingMode.HALF_UP);
+        alertService.raiseOnce(homeId, device.getId(), AlertType.EXCESSIVE_CONSUMPTION, AlertSeverity.WARNING,
+                "Consumo excesivo", device.getName() + " lleva al menos " + sustained.toMinutes()
+                        + " min consumiendo " + Math.round(device.getConsumptionWatts()) + " W (umbral "
+                        + Math.round(threshold) + " W). En la última hora: " + String.format("%.3f", kwh)
+                        + " kWh, costo estimado " + cost + " " + home.getCurrency(),
+                device.getRoomId());
+    }
+
+    private void checkPossibleLeak(AutomationSettingsEntity settings, ZoneId zone, DeviceEntity device,
+                                   Map<UUID, RoomState> roomStates, Instant now) {
+        if (device.getPowerState() != PowerState.ON || device.getRoomId() == null) {
+            return;
+        }
+        RoomState state = roomStates.get(device.getRoomId());
+        if (state == null || !state.known() || state.occupied() || state.vacantMinutes() < settings.getLeakMinutes()) {
+            return; // filtro barato antes de calcular la línea base
+        }
+        List<Double> baseline = baselineService.sameHourSamples(device.getId(), zone, now);
+        LeakDetectionPolicy.evaluate(device.getConsumptionWatts(), baseline, state.known(), state.occupied(),
+                        state.vacantMinutes(), settings.getLeakMinutes())
+                .ifPresent(suspicion -> alertService.raiseOnce(settings.getHomeId(), device.getId(),
+                        AlertType.POSSIBLE_ENERGY_LEAK, AlertSeverity.CRITICAL, "Posible fuga de energía",
+                        device.getName() + " consume " + Math.round(suspicion.currentWatts())
+                                + " W con la habitación vacía hace " + state.vacantMinutes()
+                                + " min; a esta hora suele consumir " + Math.round(suspicion.baselineWatts())
+                                + " W. Puntaje de anomalía: " + suspicion.anomalyPercent() + "%",
+                        device.getRoomId()));
     }
 
     /** Aplica el plan de la IA, validando cada decisión contra el estado real. Devuelve las acciones ejecutadas. */
@@ -389,13 +449,10 @@ public class AutomationService {
                     continue;
                 }
                 if (device.isCritical()) {
+                    // Un crítico encendido en una habitación vacía es lo normal (nevera, router): no es una fuga.
+                    // La fuga se detecta por consumo anómalo en checkPossibleLeak.
                     actions += recordOnce(homeId, room, device, ActionType.PROTECTED_CRITICAL_DEVICE,
                             device.getName() + " es crítico: se mantiene encendido en " + room.getName(), 0);
-                    if (vacantMinutes >= settings.getLeakMinutes()) {
-                        alertService.raiseOnce(homeId, device.getId(), AlertType.POSSIBLE_ENERGY_LEAK, AlertSeverity.CRITICAL,
-                                "Posible fuga de energía", device.getName() + " lleva " + vacantMinutes
-                                        + " min encendido en " + room.getName() + " sin presencia", room.getId());
-                    }
                     continue;
                 }
                 double watts = device.getConsumptionWatts();
@@ -520,6 +577,13 @@ public class AutomationService {
         }
         if (s.leakMinutes() < 1 || s.leakMinutes() > 1440) {
             throw ApiException.badRequest("El tiempo de fuga debe estar entre 1 y 1440 minutos");
+        }
+        if (s.consumptionSustainedMinutes() != null
+                && (s.consumptionSustainedMinutes() < 1 || s.consumptionSustainedMinutes() > 240)) {
+            throw ApiException.badRequest("La duración del consumo excesivo debe estar entre 1 y 240 minutos");
+        }
+        if (s.alertCooldownMinutes() != null && (s.alertCooldownMinutes() < 1 || s.alertCooldownMinutes() > 1440)) {
+            throw ApiException.badRequest("El enfriamiento de alertas debe estar entre 1 y 1440 minutos");
         }
     }
 

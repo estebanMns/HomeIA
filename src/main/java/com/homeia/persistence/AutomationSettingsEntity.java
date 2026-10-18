@@ -38,6 +38,14 @@ public class AutomationSettingsEntity {
     @Column(name = "leak_minutes", nullable = false)
     private int leakMinutes;
 
+    /** Minutos que el consumo debe mantenerse sobre el umbral para alertar consumo excesivo. */
+    @Column(name = "consumption_sustained_minutes", nullable = false)
+    private int consumptionSustainedMinutes = 10;
+
+    /** Minutos sin repetir la misma alerta del mismo dispositivo, aunque ya se haya revisado. */
+    @Column(name = "alert_cooldown_minutes", nullable = false)
+    private int alertCooldownMinutes = 30;
+
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 

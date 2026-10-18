@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,4 +17,10 @@ public interface WhatsAppMessageRepository extends JpaRepository<WhatsAppMessage
     Optional<WhatsAppMessageEntity> findByIdAndHomeId(UUID id, UUID homeId);
 
     List<WhatsAppMessageEntity> findTop50ByHomeIdAndStatusOrderByCreatedAtAsc(UUID homeId, MessageStatus status);
+
+    long countByHomeIdAndStatus(UUID homeId, MessageStatus status);
+
+    /** Cola de envío: mensajes pendientes cuyo siguiente intento ya venció. */
+    List<WhatsAppMessageEntity> findTop50ByStatusAndNextAttemptAtLessThanEqualOrderByNextAttemptAtAsc(
+            MessageStatus status, Instant now);
 }

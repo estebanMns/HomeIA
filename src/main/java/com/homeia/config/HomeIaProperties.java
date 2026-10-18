@@ -33,11 +33,26 @@ public record HomeIaProperties(
                        String clientId, String topicPrefix) {
     }
 
-    public record WhatsApp(String accessToken, String phoneNumberId, String apiBaseUrl) {
+    /**
+     * @param alertTemplate    nombre de la plantilla aprobada en Meta para las alertas. Meta solo permite texto
+     *                         libre dentro de las 24 h siguientes a que el usuario escriba al número; los avisos que
+     *                         inicia HomeIA deben ir como plantilla. Vacío = texto libre (solo para pruebas).
+     * @param templateLanguage código de idioma de la plantilla, p. ej. "es" o "es_CO".
+     */
+    public record WhatsApp(String accessToken, String phoneNumberId, String apiBaseUrl,
+                           String alertTemplate, String templateLanguage) {
 
         public boolean configured() {
             return accessToken != null && !accessToken.isBlank()
                     && phoneNumberId != null && !phoneNumberId.isBlank();
+        }
+
+        public boolean usesTemplate() {
+            return alertTemplate != null && !alertTemplate.isBlank();
+        }
+
+        public String languageOrDefault() {
+            return templateLanguage == null || templateLanguage.isBlank() ? "es" : templateLanguage;
         }
     }
 
