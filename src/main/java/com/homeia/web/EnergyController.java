@@ -5,6 +5,7 @@ import com.homeia.service.EnergyService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,6 +43,7 @@ public class EnergyController {
     }
 
     /** Ingesta de una lectura de consumo (medidor externo o integración). */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/readings")
     public ReadingDto record(@AuthenticationPrincipal AuthPrincipal principal, @Valid @RequestBody ReadingBody body) {
         var reading = energyService.recordReading(principal.homeId(), body.deviceId(), body.watts(), body.measuredAt());

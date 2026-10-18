@@ -86,7 +86,7 @@ public class AutomationService {
     private final AuditService auditService;
     private final com.homeia.persistence.HomeRepository homeRepository;
 
-    private final Map<UUID, Map.Entry<Instant, Double>> predictionCache = new HashMap<>();
+    private final ReturnProbabilityCache predictionCache = new ReturnProbabilityCache(PREDICTION_TTL);
 
     /** Estado de una habitación según su último evento de presencia. known=false si nunca hubo eventos. */
     private record RoomState(boolean known, boolean occupied, long vacantMinutes) {
@@ -171,15 +171,9 @@ public class AutomationService {
     @Transactional(readOnly = true)
     public double returnProbabilityPercent(RoomEntity room) {
         Instant now = Instant.now();
-        Map.Entry<Instant, Double> cached = predictionCache.get(room.getId());
-        if (cached != null && cached.getKey().plus(PREDICTION_TTL).isAfter(now)) {
-            return cached.getValue();
-        }
-        double probability = geminiClient.configured()
+        return predictionCache.percent(room.getId(), now, () -> geminiClient.configured()
                 ? geminiProbability(room, now).orElseGet(() -> historicalProbability(room, now))
-                : historicalProbability(room, now);
-        predictionCache.put(room.getId(), Map.entry(now, probability));
-        return probability * 100.0;
+                : historicalProbability(room, now));
     }
 
     /** Probabilidad histórica: fracción de veces que la habitación estuvo ocupada a esta misma hora. */
@@ -274,7 +268,8 @@ public class AutomationService {
             Set<UUID> knownIds = devices.stream().map(DeviceEntity::getId).collect(Collectors.toSet());
             Optional<List<AiEnergyPlanner.Decision>> plan = aiPlanner.plan(homeId, snapshot, knownIds);
             if (plan.isPresent()) {
-                actions += applyAiDecisions(homeId, devices, rooms, roomStates, plan.get(), pendingCommand);
+                actions += applyAiDecisions(homeId, devices, rooms, roomStates, plan.get(), pendingCommand,
+                        settings.getVacancyMinutes());
                 return actions;
             }
             log.warn("La IA no respondió para la casa {}: se usan las reglas de respaldo", homeId);
@@ -317,7 +312,7 @@ public class AutomationService {
     /** Aplica el plan de la IA, validando cada decisión contra el estado real. Devuelve las acciones ejecutadas. */
     private int applyAiDecisions(UUID homeId, List<DeviceEntity> devices, Map<UUID, RoomEntity> rooms,
                                  Map<UUID, RoomState> roomStates, List<AiEnergyPlanner.Decision> decisions,
-                                 Set<UUID> pendingCommand) {
+                                 Set<UUID> pendingCommand, int vacancyMinutes) {
         Map<UUID, DeviceEntity> byId = devices.stream().collect(Collectors.toMap(DeviceEntity::getId, d -> d));
         int actions = 0;
         for (AiEnergyPlanner.Decision decision : decisions) {
@@ -331,9 +326,11 @@ public class AutomationService {
                 continue; // sin datos de presencia no hay base para decidir
             }
 
+            boolean deviceOn = device.getPowerState() == PowerState.ON;
             if ("OFF".equals(decision.action())) {
-                if (device.getPowerState() != PowerState.ON || device.isCritical() || state.occupied()) {
-                    continue; // guardarraíles: críticos y habitaciones ocupadas nunca se apagan
+                if (!AutomationGuards.canSwitchOff(deviceOn, device.isCritical(), state.known(), state.occupied(),
+                        state.vacantMinutes(), vacancyMinutes)) {
+                    continue; // guardarraíles: críticos, ocupadas o vacías hace menos del tiempo configurado
                 }
                 if (!deviceService.commandAutomatically(homeId, device.getId(), device.getName(), DeviceService.Command.OFF)) {
                     log.warn("No se pudo apagar {} automáticamente: el broker MQTT no está disponible", device.getName());
@@ -347,7 +344,7 @@ public class AutomationService {
                         room.getId());
                 actions++;
             } else if ("ON".equals(decision.action())) {
-                if (device.getPowerState() != PowerState.OFF || !state.occupied()) {
+                if (!AutomationGuards.canSwitchOn(deviceOn, state.known(), state.occupied())) {
                     continue; // guardarraíles: solo se enciende lo apagado en una habitación con presencia
                 }
                 if (!deviceService.commandAutomatically(homeId, device.getId(), device.getName(), DeviceService.Command.ON)) {

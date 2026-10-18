@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import { DoorOpen, Pencil, Plus, Trash2 } from 'lucide-react';
 import { api, ApiError } from '@/services/api';
 import { useAsync } from '@/hooks/useAsync';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Device, Room, RoomEnergy } from '@/types';
 import { Badge, Button, Card, SectionTitle } from '@/components/ui/Primitives';
 
@@ -14,6 +15,8 @@ interface Data {
 }
 
 export default function RoomsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const { data, error, loading, reload } = useAsync<Data>(async () => {
     const to = new Date();
     const from = new Date(to.getTime() - 24 * 3600 * 1000);
@@ -76,6 +79,7 @@ export default function RoomsPage() {
         <Card style={{ marginBottom: 16, color: error ? 'var(--red)' : 'var(--text)' }}>{error || message}</Card>
       )}
 
+      {isAdmin && (
       <Card style={{ marginBottom: 16 }}>
         <form onSubmit={create} className="filter-row" style={{ marginBottom: 0 }}>
           <div className="search grow">
@@ -90,6 +94,7 @@ export default function RoomsPage() {
           </button>
         </form>
       </Card>
+      )}
 
       {loading && !data ? (
         <div className="muted">Cargando…</div>
@@ -116,6 +121,7 @@ export default function RoomsPage() {
                     <span>{energy ? `${energy.kwh.toLocaleString('es-CO')} kWh` : 'Sin consumo'}</span>
                     <strong>{energy ? `${energy.cost.toLocaleString('es-CO')}` : ''}</strong>
                   </div>
+                  {isAdmin && (
                   <div className="quick-actions" style={{ marginTop: 12 }}>
                     <Button variant="outline" size="sm" disabled={busy} onClick={() => run(() => api.roomPresence(room.id, true), 'Presencia registrada')}>
                       Registrar presencia
@@ -134,6 +140,7 @@ export default function RoomsPage() {
                       <Trash2 size={16} />
                     </Button>
                   </div>
+                  )}
                 </div>
               </Card>
             );
