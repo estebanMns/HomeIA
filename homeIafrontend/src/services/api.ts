@@ -187,7 +187,7 @@ export const api = {
     request<Device[]>('GET', `/devices${query(filters)}`),
   createDevice: (body: { name: string; type: DeviceType; roomId?: string; critical: boolean }) =>
     request<Device>('POST', '/devices', body),
-  updateDevice: (id: string, body: { name?: string; roomId?: string; clearRoom?: boolean; critical?: boolean }) =>
+  updateDevice: (id: string, body: { name?: string; roomId?: string; clearRoom?: boolean; critical?: boolean; consumptionAlertWatts?: number }) =>
     request<Device>('PUT', `/devices/${id}`, body),
   deleteDevice: (id: string) => request<void>('DELETE', `/devices/${id}`),
   /** confirmCritical: el backend exige confirmación explícita para apagar un dispositivo crítico. */

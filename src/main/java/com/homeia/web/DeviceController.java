@@ -32,11 +32,12 @@ public class DeviceController {
     public record DeviceDto(UUID id, String name, UUID roomId, DeviceType type, ConnectionStatus connectionStatus,
                             PowerState powerState, Integer brightness, double consumptionWatts, boolean critical,
                             Boolean presence, Instant lastPresenceAt, Instant lastStatusChangeAt, Instant lastSeenAt,
-                            String bluetoothId) {
+                            String bluetoothId, Double consumptionAlertWatts) {
         static DeviceDto from(DeviceEntity d) {
             return new DeviceDto(d.getId(), d.getName(), d.getRoomId(), d.getType(), d.getConnectionStatus(),
                     d.getPowerState(), d.getBrightness(), d.getConsumptionWatts(), d.isCritical(), d.getPresence(),
-                    d.getLastPresenceAt(), d.getLastStatusChangeAt(), d.getLastSeenAt(), d.getBluetoothId());
+                    d.getLastPresenceAt(), d.getLastStatusChangeAt(), d.getLastSeenAt(), d.getBluetoothId(),
+                    d.getConsumptionAlertWatts());
         }
     }
 
@@ -47,7 +48,9 @@ public class DeviceController {
     public record DeviceBody(@NotBlank String name, @NotNull DeviceType type, UUID roomId, boolean critical) {
     }
 
-    public record UpdateDeviceBody(String name, UUID roomId, boolean clearRoom, Boolean critical) {
+    /** consumptionAlertWatts: umbral propio del dispositivo; null no lo cambia, 0 o negativo vuelve al de la casa. */
+    public record UpdateDeviceBody(String name, UUID roomId, boolean clearRoom, Boolean critical,
+                                   Double consumptionAlertWatts) {
     }
 
     public record CommandBody(@NotNull DeviceService.Command command, Integer brightness, boolean confirmCritical) {
@@ -77,7 +80,7 @@ public class DeviceController {
     public DeviceDto update(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id,
                             @RequestBody UpdateDeviceBody body) {
         return DeviceDto.from(deviceService.update(principal, id, body.name(), body.roomId(), body.clearRoom(),
-                body.critical()));
+                body.critical(), body.consumptionAlertWatts()));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

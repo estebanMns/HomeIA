@@ -4,6 +4,7 @@ import com.homeia.domain.AlertType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,4 +15,6 @@ public interface AlertRepository extends JpaRepository<AlertEntity, UUID>, JpaSp
     long countByHomeIdAndAcknowledgedFalse(UUID homeId);
 
     boolean existsByHomeIdAndDeviceIdAndTypeAndAcknowledgedFalse(UUID homeId, UUID deviceId, AlertType type);
+
+    boolean existsByHomeIdAndDeviceIdAndTypeAndCreatedAtAfter(UUID homeId, UUID deviceId, AlertType type, Instant since);
 }

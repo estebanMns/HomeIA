@@ -4,6 +4,8 @@ import com.homeia.domain.AlertSeverity;
 import com.homeia.domain.AlertType;
 import com.homeia.persistence.AlertEntity;
 import com.homeia.persistence.AlertRepository;
+import com.homeia.persistence.AutomationSettingsEntity;
+import com.homeia.persistence.AutomationSettingsRepository;
 import com.homeia.security.AuthPrincipal;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +29,10 @@ public class AlertService {
     private final AlertRepository alertRepository;
     private final WhatsAppService whatsAppService;
     private final AuditService auditService;
+    private final AutomationSettingsRepository settingsRepository;
+
+    /** Enfriamiento por defecto si la casa no tiene configuración de automatización. */
+    private static final int DEFAULT_COOLDOWN_MINUTES = 30;
 
     @Transactional(readOnly = true)
     public Page<AlertEntity> search(UUID homeId, AlertSeverity severity, Boolean acknowledged, int page, int size) {
@@ -63,14 +70,31 @@ public class AlertService {
         return raise(principal.homeId(), AlertType.MANUAL, severity, title, message, roomId, deviceId, principal.email());
     }
 
-    /** Crea la alerta solo si no hay una igual sin atender para el mismo dispositivo. */
+    /**
+     * Crea la alerta solo si no hay una igual sin atender para el mismo dispositivo, ni se creó una igual
+     * durante el enfriamiento configurado. Sin el enfriamiento, revisar una alerta hacía que el siguiente
+     * ciclo (30 s después) la volviera a crear y a enviar por WhatsApp.
+     */
     @Transactional
     public AlertEntity raiseOnce(UUID homeId, UUID deviceId, AlertType type, AlertSeverity severity,
                                  String title, String message, UUID roomId) {
-        if (deviceId != null && alertRepository.existsByHomeIdAndDeviceIdAndTypeAndAcknowledgedFalse(homeId, deviceId, type)) {
-            return null;
+        if (deviceId != null) {
+            if (alertRepository.existsByHomeIdAndDeviceIdAndTypeAndAcknowledgedFalse(homeId, deviceId, type)) {
+                return null;
+            }
+            Instant since = Instant.now().minus(Duration.ofMinutes(cooldownMinutes(homeId)));
+            if (alertRepository.existsByHomeIdAndDeviceIdAndTypeAndCreatedAtAfter(homeId, deviceId, type, since)) {
+                return null;
+            }
         }
         return raise(homeId, type, severity, title, message, roomId, deviceId, "SISTEMA");
+    }
+
+    private int cooldownMinutes(UUID homeId) {
+        return settingsRepository.findById(homeId)
+                .map(AutomationSettingsEntity::getAlertCooldownMinutes)
+                .filter(minutes -> minutes > 0)
+                .orElse(DEFAULT_COOLDOWN_MINUTES);
     }
 
     private AlertEntity raise(UUID homeId, AlertType type, AlertSeverity severity, String title, String message,

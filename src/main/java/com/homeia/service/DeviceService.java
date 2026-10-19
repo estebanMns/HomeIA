@@ -77,7 +77,7 @@ public class DeviceService {
 
     @Transactional
     public DeviceEntity update(AuthPrincipal principal, UUID deviceId, String name, UUID roomId,
-                               boolean clearRoom, Boolean critical) {
+                               boolean clearRoom, Boolean critical, Double consumptionAlertWatts) {
         DeviceEntity device = get(principal.homeId(), deviceId);
         if (name != null && !name.isBlank()) {
             device.setName(name.trim());
@@ -90,6 +90,9 @@ public class DeviceService {
         }
         if (critical != null) {
             device.setCritical(critical);
+        }
+        if (consumptionAlertWatts != null) {
+            device.setConsumptionAlertWatts(consumptionAlertWatts > 0 ? consumptionAlertWatts : null);
         }
         device.setUpdatedAt(Instant.now());
         auditService.record(principal, "DEVICE_UPDATED", "DEVICE", deviceId.toString(), device.getName());

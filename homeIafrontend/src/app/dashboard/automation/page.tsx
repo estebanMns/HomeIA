@@ -116,9 +116,14 @@ export default function AutomationPage() {
                 <div className="settings-grid">
                   <label className="field"><span>Minutos sin presencia antes de apagar</span><div><input type="number" min={1} max={1440} value={form.vacancyMinutes} onChange={(e) => setForm({ ...form, vacancyMinutes: Number(e.target.value) })} /></div></label>
                   <label className="field"><span>Sensibilidad de regreso (%)</span><div><input type="number" min={1} max={100} value={form.returnSensitivityPercent} onChange={(e) => setForm({ ...form, returnSensitivityPercent: Number(e.target.value) })} /></div></label>
-                  <label className="field"><span>Umbral de consumo (W)</span><div><input type="number" min={1} value={form.consumptionAlertWatts} onChange={(e) => setForm({ ...form, consumptionAlertWatts: Number(e.target.value) })} /></div></label>
+                  <label className="field"><span>Umbral de consumo excesivo (W)</span><div><input type="number" min={1} value={form.consumptionAlertWatts} onChange={(e) => setForm({ ...form, consumptionAlertWatts: Number(e.target.value) })} /></div></label>
+                  <label className="field"><span>Minutos sostenidos sobre el umbral</span><div><input type="number" min={1} max={240} value={form.consumptionSustainedMinutes} onChange={(e) => setForm({ ...form, consumptionSustainedMinutes: Number(e.target.value) })} /></div></label>
+                  <label className="field"><span>Minutos de habitación vacía para revisar fugas</span><div><input type="number" min={1} max={1440} value={form.leakMinutes} onChange={(e) => setForm({ ...form, leakMinutes: Number(e.target.value) })} /></div></label>
+                  <label className="field"><span>Minutos entre alertas repetidas</span><div><input type="number" min={1} max={1440} value={form.alertCooldownMinutes} onChange={(e) => setForm({ ...form, alertCooldownMinutes: Number(e.target.value) })} /></div></label>
                 </div>
-                <label className="field"><span>Minutos encendido sin presencia para alerta de fuga</span><div><input type="number" min={1} max={1440} value={form.leakMinutes} onChange={(e) => setForm({ ...form, leakMinutes: Number(e.target.value) })} /></div></label>
+                <p className="muted" style={{ margin: '4px 0 12px' }}>
+                  Una posible fuga se detecta cuando, con la habitación vacía, un dispositivo consume mucho más de lo habitual a esa hora.
+                </p>
                 <button type="submit" className="btn btn-primary btn-md" disabled={busy}>Guardar reglas</button>
               </form>
             </Card>
