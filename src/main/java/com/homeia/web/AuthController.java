@@ -1,16 +1,25 @@
 package com.homeia.web;
 
 import com.homeia.persistence.UserEntity;
+import com.homeia.service.ApiException;
 import com.homeia.service.AuthService;
+import com.homeia.service.PasswordPolicy;
+import com.homeia.service.RegistrationRateLimiter;
 import com.homeia.service.PasswordResetService;
 import com.homeia.service.SetupService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -20,19 +29,25 @@ public class AuthController {
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
     private final SetupService setupService;
+    private final RegistrationRateLimiter registrationLimiter;
 
-    public AuthController(AuthService authService, PasswordResetService passwordResetService, SetupService setupService) {
+    public AuthController(AuthService authService, PasswordResetService passwordResetService, SetupService setupService,
+                          RegistrationRateLimiter registrationLimiter) {
         this.authService = authService;
         this.passwordResetService = passwordResetService;
         this.setupService = setupService;
+        this.registrationLimiter = registrationLimiter;
+    }
+
+    public record PasswordRuleDto(String id, String description) {
     }
 
     public record LoginRequest(@NotBlank String email, @NotBlank String password) {
     }
 
     public record RegisterBody(
-            @NotBlank(message = "El nombre es obligatorio") String fullName,
-            @NotBlank(message = "El correo es obligatorio") String email,
+            @NotBlank(message = "El nombre es obligatorio") @Size(max = 120, message = "El nombre admite hasta 120 caracteres") String fullName,
+            @NotBlank(message = "El correo es obligatorio") @Size(max = 254, message = "El correo admite hasta 254 caracteres") String email,
             @NotBlank(message = "La contraseña es obligatoria") String password) {
     }
 
@@ -63,9 +78,25 @@ public class AuthController {
         return session(authService.login(request.email(), request.password()));
     }
 
-    /** Crea la cuenta con su propia casa. No inicia sesión: el usuario debe ingresar desde el login. */
+    /** Reglas de contraseña vigentes, para mostrarlas en los formularios. */
+    @GetMapping("/password-policy")
+    public Map<String, Object> passwordPolicy() {
+        List<PasswordRuleDto> rules = Arrays.stream(PasswordPolicy.Rule.values())
+                .map(r -> new PasswordRuleDto(r.name(), r.description()))
+                .toList();
+        return Map.of("minLength", PasswordPolicy.MIN_LENGTH, "maxLength", PasswordPolicy.MAX_LENGTH, "rules", rules);
+    }
+
+    /**
+     * Crea la cuenta con su propia casa. No inicia sesión: el usuario debe ingresar desde el login.
+     * Limitado por IP para frenar la creación masiva de cuentas.
+     */
     @PostMapping("/register")
-    public Map<String, Object> register(@Valid @RequestBody RegisterBody body) {
+    public Map<String, Object> register(@Valid @RequestBody RegisterBody body, HttpServletRequest request) {
+        if (!registrationLimiter.tryAcquire(request.getRemoteAddr())) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Se hicieron demasiados intentos de registro desde esta red. Espera una hora e inténtalo de nuevo");
+        }
         setupService.register(body.fullName(), body.email(), body.password());
         return Map.of("message", "Cuenta creada. Ya puedes ingresar con tu correo y contraseña.");
     }

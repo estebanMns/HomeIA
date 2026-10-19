@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/services/api';
 import { Logo } from '@/components/ui/Primitives';
+import NewPasswordFields, { isNewPasswordValid } from '@/components/auth/NewPasswordFields';
 
 export default function SetupPage() {
   const router = useRouter();
@@ -11,6 +12,9 @@ export default function SetupPage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ adminFullName: '', adminEmail: '', adminPassword: '' });
+  const [confirm, setConfirm] = useState('');
+  const personalData = [form.adminFullName, form.adminEmail];
+  const passwordOk = isNewPasswordValid(form.adminPassword, confirm, personalData);
 
   useEffect(() => {
     api
@@ -25,6 +29,10 @@ export default function SetupPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!passwordOk) {
+      setError('Revisa la contraseña: debe cumplir todas las reglas y coincidir con la confirmación');
+      return;
+    }
     setSaving(true);
     try {
       await api.setup(form);
@@ -68,23 +76,24 @@ export default function SetupPage() {
           <label className="field">
             <span>Nombre completo</span>
             <div>
-              <input value={form.adminFullName} onChange={(e) => setForm({ ...form, adminFullName: e.target.value })} autoComplete="name" required />
+              <input value={form.adminFullName} onChange={(e) => setForm({ ...form, adminFullName: e.target.value })} autoComplete="name" maxLength={120} required />
             </div>
           </label>
           <label className="field">
             <span>Correo electrónico</span>
             <div>
-              <input type="email" value={form.adminEmail} onChange={(e) => setForm({ ...form, adminEmail: e.target.value })} autoComplete="email" required />
+              <input type="email" value={form.adminEmail} onChange={(e) => setForm({ ...form, adminEmail: e.target.value })} autoComplete="email" maxLength={254} required />
             </div>
           </label>
-          <label className="field">
-            <span>Contraseña (mínimo 10 caracteres)</span>
-            <div>
-              <input type="password" value={form.adminPassword} onChange={(e) => setForm({ ...form, adminPassword: e.target.value })} minLength={10} autoComplete="new-password" required />
-            </div>
-          </label>
+          <NewPasswordFields
+            password={form.adminPassword}
+            confirm={confirm}
+            onPasswordChange={(adminPassword) => setForm({ ...form, adminPassword })}
+            onConfirmChange={setConfirm}
+            personalData={personalData}
+          />
 
-          <button type="submit" className="btn btn-primary btn-md login-button" disabled={saving}>
+          <button type="submit" className="btn btn-primary btn-md login-button" disabled={saving || !passwordOk}>
             {saving ? 'Creando…' : 'Crear cuenta'}
           </button>
         </form>
