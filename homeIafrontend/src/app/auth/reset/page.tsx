@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api, ApiError } from '@/services/api';
 import { Logo } from '@/components/ui/Primitives';
+import NewPasswordFields, { isNewPasswordValid } from '@/components/auth/NewPasswordFields';
 
 export default function ResetPasswordPage() {
   return (
@@ -26,8 +27,8 @@ function ResetForm() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
-    if (password !== confirm) {
-      setError('La confirmación no coincide');
+    if (!isNewPasswordValid(password, confirm)) {
+      setError('Revisa la contraseña: debe cumplir todas las reglas y coincidir con la confirmación');
       return;
     }
     setBusy(true);
@@ -67,15 +68,15 @@ function ResetForm() {
           ) : (
             <>
               {error && <div className="card" style={{ margin: '14px 0', color: 'var(--red)', borderColor: 'var(--red)' }}>{error}</div>}
-              <label className="field">
-                <span>Nueva contraseña (mínimo 10 caracteres)</span>
-                <div><input type="password" minLength={10} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required /></div>
-              </label>
-              <label className="field">
-                <span>Confirmar contraseña</span>
-                <div><input type="password" minLength={10} value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required /></div>
-              </label>
-              <button type="submit" className="btn btn-primary btn-md login-button" disabled={busy || !token}>
+              <NewPasswordFields
+                password={password}
+                confirm={confirm}
+                onPasswordChange={setPassword}
+                onConfirmChange={setConfirm}
+                label="Nueva contraseña"
+                confirmLabel="Confirmar contraseña"
+              />
+              <button type="submit" className="btn btn-primary btn-md login-button" disabled={busy || !token || !isNewPasswordValid(password, confirm)}>
                 {busy ? 'Guardando…' : 'Cambiar contraseña'}
               </button>
             </>

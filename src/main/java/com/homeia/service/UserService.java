@@ -18,8 +18,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserService {
 
-    static final int MIN_PASSWORD_LENGTH = 10;
-
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
@@ -38,10 +36,10 @@ public class UserService {
     @Transactional
     public UserEntity create(AuthPrincipal principal, String email, String password, String fullName, UserRole role) {
         String cleanEmail = normalizeEmail(email);
-        validatePassword(password);
         if (fullName == null || fullName.isBlank()) {
             throw ApiException.badRequest("El nombre es obligatorio");
         }
+        PasswordPolicy.validate(password, fullName, cleanEmail);
         if (userRepository.existsByEmailIgnoreCase(cleanEmail)) {
             throw ApiException.conflict("Ya existe un usuario con ese correo");
         }
@@ -85,7 +83,7 @@ public class UserService {
             user.setActive(active);
         }
         if (password != null && !password.isBlank()) {
-            validatePassword(password);
+            PasswordPolicy.validate(password, user.getFullName(), user.getEmail());
             user.setPasswordHash(passwordEncoder.encode(password));
             refreshTokenRepository.deleteAllByUserId(userId);
         }
@@ -101,7 +99,7 @@ public class UserService {
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             throw ApiException.unauthorized("La contraseña actual no es correcta");
         }
-        validatePassword(newPassword);
+        PasswordPolicy.validate(newPassword, user.getFullName(), user.getEmail());
         if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
             throw ApiException.badRequest("La nueva contraseña debe ser distinta de la actual");
         }
@@ -139,9 +137,4 @@ public class UserService {
         return email.trim().toLowerCase();
     }
 
-    static void validatePassword(String password) {
-        if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
-            throw ApiException.badRequest("La contraseña debe tener al menos " + MIN_PASSWORD_LENGTH + " caracteres");
-        }
-    }
 }

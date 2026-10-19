@@ -71,7 +71,7 @@ public class SetupService {
         }
         HomeService.validateZone(request.timezone());
         String email = UserService.normalizeEmail(request.adminEmail());
-        UserService.validatePassword(request.adminPassword());
+        PasswordPolicy.validate(request.adminPassword(), request.adminFullName(), email);
         if (userRepository.existsByEmailIgnoreCase(email)) {
             throw ApiException.conflict("Ya existe una cuenta con ese correo");
         }

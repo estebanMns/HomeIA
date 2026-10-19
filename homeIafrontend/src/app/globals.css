@@ -223,3 +223,40 @@ main { min-width: 0; flex: 1; margin-left: 256px; }
 @media (max-width: 390px) {
   .kpi-grid{grid-template-columns:1fr 1fr}.kpi-note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rooms-grid,.rooms-grid.large{grid-template-columns:1fr}.service-grid{grid-template-columns:1fr}
 }
+
+/* ---------- Contraseñas nuevas: reglas en vivo, medidor y mostrar/ocultar ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.field>div:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+.field input[aria-invalid="true"] { color: var(--text); }
+.field>div:has(input[aria-invalid="true"]) { border-color: var(--red); }
+.pw-toggle { border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; width: 30px; height: 30px; margin-right: -6px; border-radius: 6px; cursor: pointer; }
+.pw-toggle:hover { color: var(--text); background: var(--surface-2); }
+.pw-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+.new-password .field { margin-bottom: 8px; }
+.pw-meter { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); }
+.pw-meter-bar { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.pw-meter-bar i { height: 4px; border-radius: 2px; background: var(--line); transition: background .2s; }
+.pw-meter[data-level="1"] i.on { background: var(--red); }
+.pw-meter[data-level="2"] i.on { background: var(--amber); }
+.pw-meter[data-level="3"] i.on, .pw-meter[data-level="4"] i.on { background: var(--green); }
+.pw-meter[data-level="1"] span { color: var(--red); }
+.pw-meter[data-level="2"] span { color: var(--amber); }
+.pw-meter[data-level="3"] span, .pw-meter[data-level="4"] span { color: var(--green-dark); }
+.pw-rules { list-style: none; margin: 10px 0 4px; padding: 12px; display: grid; gap: 6px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; font-size: 11px; color: var(--muted); }
+.pw-rules li { display: grid; grid-template-columns: 14px 1fr; gap: 6px; align-items: start; line-height: 1.35; }
+.pw-rules li svg { margin-top: 1px; }
+.pw-rules li.ok { color: var(--green-dark); }
+.pw-rules li.fail { color: var(--red); }
+.pw-match { display: flex; align-items: center; gap: 6px; font-size: 11px; margin: -2px 0 6px; }
+.pw-match.ok { color: var(--green-dark); }
+.pw-match.fail { color: var(--red); }
+.login-divider { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; color: var(--muted); font-size: 11px; }
+.login-divider::before, .login-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.login-secondary { width: 100%; }
+.login-help { font-size: 11px; }
+.login-help a { color: var(--green-dark); font-weight: 650; }
+@media (prefers-reduced-motion: reduce) { .pw-meter-bar i { transition: none; } }
+/* El formulario de acceso tenía ancho fijo de 380px y desbordaba pantallas de ~390px */
+.login-form-wrap { min-width: 0; }
+.login-form { width: 100%; max-width: 380px; }
+@media (max-width: 480px) { .login-form-wrap { padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); } }

@@ -9,6 +9,7 @@ import type { Home, User, UserRole } from '@/types';
 import { Badge, Button, Card, SectionTitle } from '@/components/ui/Primitives';
 import { formatDateTime } from '@/components/ui/AlertCard';
 import ChangePasswordCard from '@/components/account/ChangePasswordCard';
+import NewPasswordFields, { isNewPasswordValid } from '@/components/auth/NewPasswordFields';
 
 interface Data {
   home: Home;
@@ -63,11 +64,16 @@ export default function HomePage() {
     }), 'Datos de la casa actualizados');
   };
 
+  const [newUserConfirm, setNewUserConfirm] = useState('');
+  const newUserPasswordOk = isNewPasswordValid(newUser.password, newUserConfirm, [newUser.fullName, newUser.email]);
+
   const createUser = (e: FormEvent) => {
     e.preventDefault();
+    if (!newUserPasswordOk) return;
     run(async () => {
       await api.createUser(newUser);
       setNewUser({ fullName: '', email: '', password: '', role: 'MEMBER' });
+      setNewUserConfirm('');
     }, 'Usuario creado');
   };
 
@@ -124,7 +130,16 @@ export default function HomePage() {
                 <div className="settings-grid">
                   <label className="field"><span>Nombre</span><div><input value={newUser.fullName} onChange={(e) => setNewUser({ ...newUser, fullName: e.target.value })} required /></div></label>
                   <label className="field"><span>Correo</span><div><input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} required /></div></label>
-                  <label className="field"><span>Contraseña (10+)</span><div><input type="password" minLength={10} value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} required /></div></label>
+                </div>
+                <div style={{ maxWidth: 460 }}>
+                  <NewPasswordFields
+                    password={newUser.password}
+                    confirm={newUserConfirm}
+                    onPasswordChange={(password) => setNewUser({ ...newUser, password })}
+                    onConfirmChange={setNewUserConfirm}
+                    personalData={[newUser.fullName, newUser.email]}
+                    label="Contraseña inicial"
+                  />
                 </div>
                 <label className="field">
                   <span>Rol</span>
@@ -135,7 +150,7 @@ export default function HomePage() {
                     </select>
                   </div>
                 </label>
-                <button type="submit" className="btn btn-primary btn-md" disabled={busy}><Plus size={16} /> Agregar</button>
+                <button type="submit" className="btn btn-primary btn-md" disabled={busy || !newUserPasswordOk}><Plus size={16} /> Agregar</button>
               </form>
             )}
           </Card>

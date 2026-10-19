@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronRight, ShieldCheck } from 'lucide-react';
 import { api, ApiError } from '@/services/api';
 import { Logo } from '@/components/ui/Primitives';
+import NewPasswordFields, { isNewPasswordValid } from '@/components/auth/NewPasswordFields';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -27,8 +28,8 @@ export default function RegisterPage() {
       setError('Escribe tu nombre completo');
       return;
     }
-    if (form.password !== form.confirm) {
-      setError('Las contraseñas no coinciden');
+    if (!isNewPasswordValid(form.password, form.confirm, [form.fullName, form.email])) {
+      setError('Revisa la contraseña: debe cumplir todas las reglas y coincidir con la confirmación');
       return;
     }
     setSubmitting(true);
@@ -96,43 +97,28 @@ export default function RegisterPage() {
           <label className="field">
             <span>Nombre completo</span>
             <div>
-              <input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} autoComplete="name" required />
+              <input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} autoComplete="name" maxLength={120} required />
             </div>
           </label>
           <label className="field">
             <span>Correo electrónico</span>
             <div>
-              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} autoComplete="email" required />
+              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} autoComplete="email" maxLength={254} required />
             </div>
           </label>
-          <label className="field">
-            <span>Contraseña (mínimo 10 caracteres)</span>
-            <div>
-              <input
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                minLength={10}
-                autoComplete="new-password"
-                required
-              />
-            </div>
-          </label>
-          <label className="field">
-            <span>Repite la contraseña</span>
-            <div>
-              <input
-                type="password"
-                value={form.confirm}
-                onChange={(e) => setForm({ ...form, confirm: e.target.value })}
-                minLength={10}
-                autoComplete="new-password"
-                required
-              />
-            </div>
-          </label>
+          <NewPasswordFields
+            password={form.password}
+            confirm={form.confirm}
+            onPasswordChange={(password) => setForm({ ...form, password })}
+            onConfirmChange={(confirm) => setForm({ ...form, confirm })}
+            personalData={[form.fullName, form.email]}
+          />
 
-          <button type="submit" className="btn btn-primary btn-md login-button" disabled={submitting}>
+          <button
+            type="submit"
+            className="btn btn-primary btn-md login-button"
+            disabled={submitting || !isNewPasswordValid(form.password, form.confirm, [form.fullName, form.email])}
+          >
             {submitting ? 'Creando cuenta…' : 'Crear cuenta'} {!submitting && <ChevronRight size={17} />}
           </button>
 
