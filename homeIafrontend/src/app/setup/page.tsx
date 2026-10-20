@@ -13,8 +13,7 @@ export default function SetupPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ adminFullName: '', adminEmail: '', adminPassword: '' });
   const [confirm, setConfirm] = useState('');
-  const personalData = [form.adminFullName, form.adminEmail];
-  const passwordOk = isNewPasswordValid(form.adminPassword, confirm, personalData);
+  const passwordOk = isNewPasswordValid(form.adminPassword, confirm);
 
   useEffect(() => {
     api
@@ -90,7 +89,6 @@ export default function SetupPage() {
             confirm={confirm}
             onPasswordChange={(adminPassword) => setForm({ ...form, adminPassword })}
             onConfirmChange={setConfirm}
-            personalData={personalData}
           />
 
           <button type="submit" className="btn btn-primary btn-md login-button" disabled={saving || !passwordOk}>

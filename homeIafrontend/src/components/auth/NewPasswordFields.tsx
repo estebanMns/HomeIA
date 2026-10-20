@@ -9,8 +9,6 @@ interface Props {
   confirm: string;
   onPasswordChange: (value: string) => void;
   onConfirmChange: (value: string) => void;
-  /** Nombre y correo de la persona: la contraseña no puede contenerlos. */
-  personalData?: (string | undefined)[];
   label?: string;
   confirmLabel?: string;
 }
@@ -18,8 +16,8 @@ interface Props {
 const STRENGTH_LABEL = ['', 'Débil', 'Aceptable', 'Segura', 'Muy segura'] as const;
 
 /** True si la contraseña cumple todas las reglas y coincide con la confirmación. */
-export function isNewPasswordValid(password: string, confirm: string, personalData: (string | undefined)[] = []): boolean {
-  return passwordViolations(password, personalData).size === 0 && password === confirm;
+export function isNewPasswordValid(password: string, confirm: string): boolean {
+  return passwordViolations(password).size === 0 && password === confirm;
 }
 
 /**
@@ -31,13 +29,12 @@ export default function NewPasswordFields({
   confirm,
   onPasswordChange,
   onConfirmChange,
-  personalData = [],
   label = 'Contraseña',
   confirmLabel = 'Repite la contraseña',
 }: Props) {
   const [visible, setVisible] = useState(false);
   const ids = useId();
-  const failed = useMemo(() => passwordViolations(password, personalData), [password, personalData]);
+  const failed = useMemo(() => passwordViolations(password), [password]);
   const strength = passwordStrength(password, failed);
   const touched = password.length > 0;
   const confirmTouched = confirm.length > 0;
