@@ -260,3 +260,27 @@ main { min-width: 0; flex: 1; margin-left: 256px; }
 .login-form-wrap { min-width: 0; }
 .login-form { width: 100%; max-width: 380px; }
 @media (max-width: 480px) { .login-form-wrap { padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); } }
+
+/* ---------- Dispositivos por WiFi ---------- */
+.wifi-status { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.wifi-status-card { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; }
+.wifi-status-card strong, .wifi-status-card span { display: block; }
+.wifi-status-card strong { font-size: 13px; }
+.wifi-status-card > div > span { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.kpi-icon.gray { background: var(--surface-2); color: var(--muted); }
+.wifi-steps { list-style: decimal; margin: 4px 0 0; padding-left: 20px; display: grid; gap: 10px; font-size: 12px; line-height: 1.55; max-width: 72ch; }
+.wifi-code { margin: 8px 0 0; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; font-size: 11px; overflow-x: auto; }
+.wifi-list { display: grid; gap: 8px; }
+.wifi-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.wifi-row-name { min-width: 0; }
+.wifi-row-name strong, .wifi-row-name span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wifi-row-name strong { font-size: 13px; }
+.wifi-row-name span { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.wifi-row-form { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.wifi-row > .btn { justify-self: end; }
+.wifi-critical { height: 38px; padding: 0 12px; cursor: pointer; }
+@media (min-width: 1100px) {
+  .wifi-row { grid-template-columns: 40px minmax(0, 1fr) auto auto; }
+  .wifi-row-form { grid-column: auto; }
+}
+.device-provider { display: block; font-size: 10px; color: var(--muted); margin-top: 2px; }

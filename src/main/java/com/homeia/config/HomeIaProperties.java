@@ -10,6 +10,7 @@ public record HomeIaProperties(
         Mqtt mqtt,
         WhatsApp whatsapp,
         Gemini gemini,
+        Tuya tuya,
         Automation automation,
         Defaults defaults
 ) {
@@ -64,5 +65,32 @@ public record HomeIaProperties(
     }
 
     public record Automation(long cycleSeconds) {
+    }
+
+    /**
+     * Tuya Cloud (dispositivos Tuya / Smart Life por WiFi).
+     * @param region      centro de datos del proyecto: us (Western America), us-e, eu, eu-w, cn, in
+     * @param baseUrl     opcional: reemplaza la URL de la región
+     * @param syncSeconds cada cuánto se lee el estado de los dispositivos (cada lectura cuenta en la cuota de Tuya)
+     */
+    public record Tuya(String accessId, String accessSecret, String region, String baseUrl, long syncSeconds) {
+
+        public boolean configured() {
+            return accessId != null && !accessId.isBlank() && accessSecret != null && !accessSecret.isBlank();
+        }
+
+        public String resolvedBaseUrl() {
+            if (baseUrl != null && !baseUrl.isBlank()) {
+                return baseUrl.trim().replaceAll("/+$", "");
+            }
+            return switch (region == null ? "us" : region.trim().toLowerCase()) {
+                case "us-e" -> "https://openapi-ueaz.tuyaus.com";
+                case "eu" -> "https://openapi.tuyaeu.com";
+                case "eu-w" -> "https://openapi-weaz.tuyaeu.com";
+                case "cn" -> "https://openapi.tuyacn.com";
+                case "in" -> "https://openapi.tuyain.com";
+                default -> "https://openapi.tuyaus.com";
+            };
+        }
     }
 }

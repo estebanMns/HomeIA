@@ -164,6 +164,7 @@ export default function DevicesPage() {
                     </div>
                     <div>
                       <strong>{d.name}</strong>
+                      <span className="device-provider">{d.provider === 'TUYA' ? 'WiFi · Tuya' : 'MQTT'}</span>
                       {d.critical && (
                         <span className="critical-mini"><ShieldCheck size={11} /> Crítico</span>
                       )}

@@ -1,5 +1,6 @@
 package com.homeia.persistence;
 
+import com.homeia.domain.DeviceProvider;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
@@ -15,7 +16,9 @@ public interface DeviceRepository extends JpaRepository<DeviceEntity, UUID> {
 
     List<DeviceEntity> findByRoomId(UUID roomId);
 
-    Optional<DeviceEntity> findByHomeIdAndBluetoothId(UUID homeId, String bluetoothId);
+    Optional<DeviceEntity> findByHomeIdAndProviderAndExternalId(UUID homeId, DeviceProvider provider, String externalId);
+
+    List<DeviceEntity> findByProvider(DeviceProvider provider);
 
     long countByHomeId(UUID homeId);
 }
