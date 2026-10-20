@@ -8,7 +8,6 @@ import {
   Bell,
   Bot,
   BarChart3,
-  BluetoothConnected,
   Building2,
   ChevronDown,
   DoorOpen,
@@ -22,6 +21,7 @@ import {
   Sparkles,
   Sun,
   Users,
+  Wifi,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/services/api';
@@ -32,7 +32,7 @@ const navMain = [
   { href: '/dashboard', label: 'Resumen', icon: Home },
   { href: '/dashboard/rooms', label: 'Habitaciones', icon: DoorOpen },
   { href: '/dashboard/devices', label: 'Dispositivos', icon: HousePlug },
-  { href: '/dashboard/bluetooth', label: 'Bluetooth', icon: BluetoothConnected },
+  { href: '/dashboard/wifi', label: 'Conexión WiFi', icon: Wifi },
   { href: '/dashboard/analytics', label: 'Consumo y ahorro', icon: BarChart3 },
   { href: '/dashboard/alerts', label: 'Centro de alertas', icon: Bell },
 ];
@@ -49,7 +49,7 @@ const titleMap: Record<string, string> = {
   '/dashboard': 'Resumen',
   '/dashboard/rooms': 'Habitaciones',
   '/dashboard/devices': 'Dispositivos',
-  '/dashboard/bluetooth': 'Dispositivos Bluetooth',
+  '/dashboard/wifi': 'Dispositivos por WiFi',
   '/dashboard/analytics': 'Consumo y ahorro',
   '/dashboard/alerts': 'Centro de alertas',
   '/dashboard/automation': 'Automatización e IA',

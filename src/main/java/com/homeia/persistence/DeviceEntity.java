@@ -1,6 +1,7 @@
 package com.homeia.persistence;
 
 import com.homeia.domain.ConnectionStatus;
+import com.homeia.domain.DeviceProvider;
 import com.homeia.domain.DeviceType;
 import com.homeia.domain.PowerState;
 import jakarta.persistence.*;
@@ -28,9 +29,14 @@ public class DeviceEntity {
     @Column(name = "room_id")
     private UUID roomId;
 
-    /** Identificador Bluetooth del dispositivo (id que entrega el navegador al conectarse por GATT). */
-    @Column(name = "bluetooth_id", length = 120)
-    private String bluetoothId;
+    /** Por dónde se conecta: MQTT (dispositivo propio) o TUYA (nube de Tuya / Smart Life). */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private DeviceProvider provider = DeviceProvider.MQTT;
+
+    /** Id del dispositivo en su plataforma (el device id de Tuya). Null para dispositivos MQTT. */
+    @Column(name = "external_id", length = 64)
+    private String externalId;
 
     @Column(nullable = false, length = 120)
     private String name;

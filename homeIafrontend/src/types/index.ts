@@ -37,6 +37,7 @@ export interface Room {
 }
 
 export type DeviceType = 'LIGHT' | 'SMART_OUTLET' | 'PRESENCE_SENSOR';
+export type DeviceProvider = 'MQTT' | 'TUYA';
 export type ConnectionStatus = 'ONLINE' | 'OFFLINE';
 export type PowerState = 'ON' | 'OFF';
 export type DeviceCommand = 'ON' | 'OFF' | 'TOGGLE' | 'BRIGHTNESS' | 'STATUS';
@@ -55,7 +56,10 @@ export interface Device {
   lastPresenceAt?: string;
   lastStatusChangeAt?: string;
   lastSeenAt?: string;
-  bluetoothId?: string;
+  /** Por dónde se conecta: MQTT (dispositivo propio) o TUYA (Tuya / Smart Life por la nube). */
+  provider: DeviceProvider;
+  /** Id del dispositivo en Tuya. */
+  externalId?: string | null;
   /** Umbral propio de consumo excesivo; sin valor se usa el de la casa. */
   consumptionAlertWatts?: number | null;
 }
@@ -255,4 +259,23 @@ export interface SystemMetrics {
   whatsappPending: number;
   mqttConnected: boolean;
   generatedAt: string;
+}
+
+export interface WifiStatus {
+  tuyaConfigured: boolean;
+  tuyaRegion: string;
+  tuyaEndpoint: string;
+  mqttEnabled: boolean;
+  mqttConnected: boolean;
+}
+
+/** Dispositivo de la cuenta Smart Life vinculada al proyecto de Tuya. */
+export interface TuyaCloudDevice {
+  id: string;
+  name: string;
+  category: string;
+  productName: string;
+  online: boolean;
+  /** Id del dispositivo en HomeIA si ya se agregó a la casa. */
+  importedAs?: string | null;
 }

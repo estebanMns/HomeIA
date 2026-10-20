@@ -1,6 +1,7 @@
 package com.homeia.web;
 
 import com.homeia.domain.ConnectionStatus;
+import com.homeia.domain.DeviceProvider;
 import com.homeia.domain.DeviceType;
 import com.homeia.domain.PowerState;
 import com.homeia.persistence.DeviceEntity;
@@ -9,14 +10,12 @@ import com.homeia.service.DeviceService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import com.homeia.integration.Json;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -32,17 +31,13 @@ public class DeviceController {
     public record DeviceDto(UUID id, String name, UUID roomId, DeviceType type, ConnectionStatus connectionStatus,
                             PowerState powerState, Integer brightness, double consumptionWatts, boolean critical,
                             Boolean presence, Instant lastPresenceAt, Instant lastStatusChangeAt, Instant lastSeenAt,
-                            String bluetoothId, Double consumptionAlertWatts) {
+                            DeviceProvider provider, String externalId, Double consumptionAlertWatts) {
         static DeviceDto from(DeviceEntity d) {
             return new DeviceDto(d.getId(), d.getName(), d.getRoomId(), d.getType(), d.getConnectionStatus(),
                     d.getPowerState(), d.getBrightness(), d.getConsumptionWatts(), d.isCritical(), d.getPresence(),
-                    d.getLastPresenceAt(), d.getLastStatusChangeAt(), d.getLastSeenAt(), d.getBluetoothId(),
+                    d.getLastPresenceAt(), d.getLastStatusChangeAt(), d.getLastSeenAt(), d.getProvider(), d.getExternalId(),
                     d.getConsumptionAlertWatts());
         }
-    }
-
-    public record BluetoothBody(@NotBlank String bluetoothId, @NotBlank String name, @NotNull DeviceType type,
-                                UUID roomId, boolean critical) {
     }
 
     public record DeviceBody(@NotBlank String name, @NotNull DeviceType type, UUID roomId, boolean critical) {
@@ -89,27 +84,7 @@ public class DeviceController {
         deviceService.delete(principal, id);
     }
 
-    /** Registra (o vincula, si ya existe) un dispositivo descubierto por Bluetooth. */
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/bluetooth")
-    public DeviceDto registerBluetooth(@AuthenticationPrincipal AuthPrincipal principal,
-                                       @Valid @RequestBody BluetoothBody body) {
-        return DeviceDto.from(deviceService.registerBluetooth(principal, body.bluetoothId(), body.name(), body.type(),
-                body.roomId(), body.critical()));
-    }
-
-    /**
-     * Estado reportado desde la app por Bluetooth, con el mismo formato que el MQTT:
-     * {"powerState":"ON","consumptionWatts":12.5,"brightness":80,"presence":true}
-     */
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{id}/state")
-    public DeviceDto reportState(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id,
-                                 @RequestBody Map<String, Object> body) {
-        return DeviceDto.from(deviceService.reportState(principal, id, Json.write(body)));
-    }
-
-    /** Envía ON / OFF / TOGGLE / BRIGHTNESS / STATUS por MQTT. El estado final llega en el reporte del dispositivo. */
+    /** Envía ON / OFF / TOGGLE / BRIGHTNESS / STATUS por el driver del dispositivo (MQTT o Tuya). */
     @PostMapping("/{id}/commands")
     public DeviceDto command(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id,
                              @Valid @RequestBody CommandBody body) {

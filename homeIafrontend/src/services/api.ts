@@ -26,6 +26,8 @@ import type {
   WhatsAppMessage,
   WhatsAppRecipient,
   WhatsAppStatus,
+  WifiStatus,
+  TuyaCloudDevice,
 } from '@/types';
 
 /**
@@ -227,15 +229,13 @@ export const api = {
   /** confirmCritical: el backend exige confirmación explícita para apagar un dispositivo crítico. */
   deviceCommand: (id: string, command: DeviceCommand, brightness?: number, confirmCritical = false) =>
     request<Device>('POST', `/devices/${id}/commands`, { command, brightness, confirmCritical }),
-  registerBluetoothDevice: (body: {
-    bluetoothId: string;
-    name: string;
-    type: DeviceType;
-    roomId?: string;
-    critical: boolean;
-  }) => request<Device>('POST', '/devices/bluetooth', body),
-  reportDeviceState: (id: string, state: { powerState?: 'ON' | 'OFF'; consumptionWatts?: number; brightness?: number; presence?: boolean }) =>
-    request<Device>('POST', `/devices/${id}/state`, state),
+
+  // Dispositivos por WiFi (Tuya / Smart Life y MQTT)
+  wifiStatus: () => request<WifiStatus>('GET', '/wifi/status'),
+  tuyaDevices: () => request<TuyaCloudDevice[]>('GET', '/wifi/tuya/devices'),
+  importTuyaDevice: (body: { externalId: string; name?: string; type: DeviceType; roomId?: string; critical: boolean }) =>
+    request<Device>('POST', '/wifi/tuya/import', body),
+  syncTuya: () => request<{ updated: number }>('POST', '/wifi/tuya/sync'),
 
   changeMyPassword: (currentPassword: string, newPassword: string) =>
     request<{ success: boolean }>('PUT', '/users/me/password', { currentPassword, newPassword }),

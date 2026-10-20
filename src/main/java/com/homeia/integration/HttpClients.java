@@ -9,12 +9,12 @@ import java.time.Duration;
  * RestClient con tiempos límite. Sin ellos, una API externa lenta (Gemini, WhatsApp) dejaba bloqueado
  * el ciclo de automatización indefinidamente.
  */
-final class HttpClients {
+public final class HttpClients {
 
     private HttpClients() {
     }
 
-    static RestClient withTimeouts(String baseUrl, Duration connectTimeout, Duration readTimeout) {
+    public static RestClient withTimeouts(String baseUrl, Duration connectTimeout, Duration readTimeout) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(connectTimeout);
         factory.setReadTimeout(readTimeout);
