@@ -28,10 +28,23 @@ import type {
   WhatsAppStatus,
 } from '@/types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-if (!API_URL) {
-  throw new Error('Falta NEXT_PUBLIC_API_URL en homeIafrontend/.env.local');
+/**
+ * Dirección base de la API. Todas las rutas del backend empiezan por /api (y solo ahí aplica CORS),
+ * así que se agrega si falta: "http://localhost:8080" y "http://localhost:8080/api/" quedan iguales.
+ */
+export function normalizeApiUrl(raw: string): string {
+  const trimmed = raw.trim().replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
 }
+
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL;
+if (!RAW_API_URL) {
+  throw new Error(
+    'Falta NEXT_PUBLIC_API_URL. Crea el archivo homeIafrontend/.env.local con la línea ' +
+      'NEXT_PUBLIC_API_URL=http://localhost:8080/api y reinicia npm run dev',
+  );
+}
+const API_URL = normalizeApiUrl(RAW_API_URL);
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -124,11 +137,17 @@ async function request<T>(method: Method, path: string, body?: unknown, retry = 
   const token = tokenStore.access();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    // El navegador no obtuvo respuesta utilizable: backend apagado, dirección equivocada o CORS.
+    throw new ApiError(0, connectionErrorMessage());
+  }
 
   if (res.status === 401 && retry && token && (await refreshSession())) {
     return request<T>(method, path, body, false);
@@ -139,12 +158,27 @@ async function request<T>(method: Method, path: string, body?: unknown, retry = 
   }
 
   const text = await res.text();
-  const data = text ? JSON.parse(text) : undefined;
+  let data: { message?: string } | undefined;
+  try {
+    data = text ? JSON.parse(text) : undefined;
+  } catch {
+    throw new ApiError(res.status, `El backend respondió ${res.status} con un formato inesperado en ${API_URL}${path}`);
+  }
   if (!res.ok) {
     const message = (data && (data.message as string)) || `Error ${res.status}`;
     throw new ApiError(res.status, message);
   }
   return data as T;
+}
+
+/** Explica por qué no hubo respuesta, según desde dónde se abrió la página. */
+function connectionErrorMessage(): string {
+  const page = typeof window === 'undefined' ? '' : window.location.origin;
+  const openedByIp = page !== '' && !/^https?:\/\/(localhost|127\.0\.0\.1)(:|$)/.test(page);
+  const cors = openedByIp
+    ? ` Abriste la app desde ${page}: agrega esa dirección a CORS_ALLOWED_ORIGINS en el .env del backend y reinícialo, o abre http://localhost:3000.`
+    : ' Si el backend está encendido, revisa que CORS_ALLOWED_ORIGINS incluya ' + (page || 'la dirección del frontend') + '.';
+  return `No se pudo conectar con el backend en ${API_URL}. Verifica que esté encendido.${cors}`;
 }
 
 function query(params: Record<string, string | number | boolean | undefined | null>): string {
