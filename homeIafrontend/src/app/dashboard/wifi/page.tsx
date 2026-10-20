@@ -170,7 +170,7 @@ export default function WifiPage() {
 
           {cloud.loading && !cloud.data && <div className="muted">Buscando dispositivos en Tuya…</div>}
           {cloud.error && <div style={{ color: 'var(--red)' }}>{cloud.error}</div>}
-          {cloud.data && devices.length === 0 && (
+          {cloud.data && !cloud.error && devices.length === 0 && (
             <p className="muted">
               No hay dispositivos en el proyecto. Revisa que la cuenta Smart Life esté vinculada (Devices → Link App Account)
               y que el centro de datos del proyecto sea el mismo de tu cuenta.

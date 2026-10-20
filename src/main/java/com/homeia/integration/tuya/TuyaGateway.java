@@ -42,8 +42,8 @@ public class TuyaGateway {
                 // Tuya responde 200 incluso con errores (success=false); el cliente revisa el cuerpo.
                 return request.retrieve().body(String.class);
             };
-            this.client = new TuyaClient(this.properties.accessId().trim(), this.properties.accessSecret().trim(),
-                    transport, Clock.systemUTC());
+            this.client = new TuyaClient(TuyaCredentials.clean(this.properties.accessId()),
+                    TuyaCredentials.clean(this.properties.accessSecret()), transport, Clock.systemUTC());
         } else {
             this.client = null;
         }

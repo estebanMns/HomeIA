@@ -189,7 +189,10 @@ public class TuyaClient {
         int code = root.path("code").asInt(0);
         String msg = root.path("msg").asText("sin detalle");
         return switch (code) {
-            case 1004 -> "Tuya rechazó la firma (1004). Revisa TUYA_ACCESS_ID y TUYA_ACCESS_SECRET";
+            case 1004 -> "Tuya rechazó la firma (1004). Revisa que TUYA_ACCESS_SECRET sea el Access Secret del proyecto";
+            case 2009 -> "Tuya no reconoce el Access ID (2009). Copia de nuevo el Access ID/Client ID de la pestaña "
+                    + "Overview del proyecto y revisa que TUYA_REGION corresponda a su centro de datos "
+                    + "(us = Western America)";
             case 1106 -> "Tuya negó el permiso (1106). Revisa que la cuenta Smart Life esté vinculada al proyecto, "
                     + "que el centro de datos sea el correcto y que el servicio IoT Core esté autorizado";
             default -> "Tuya respondió con error " + code + ": " + msg;
