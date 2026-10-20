@@ -3,7 +3,6 @@
 import { FormEvent, useState } from 'react';
 import { api, ApiError } from '@/services/api';
 import { Button, Card, SectionTitle } from '@/components/ui/Primitives';
-import { useAuth } from '@/contexts/AuthContext';
 import NewPasswordFields, { isNewPasswordValid } from '@/components/auth/NewPasswordFields';
 
 export default function ChangePasswordCard() {
@@ -11,9 +10,7 @@ export default function ChangePasswordCard() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const { user } = useAuth();
-  const personalData = [user?.fullName, user?.email];
-  const passwordOk = isNewPasswordValid(form.newPassword, form.confirm, personalData);
+  const passwordOk = isNewPasswordValid(form.newPassword, form.confirm);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -48,7 +45,6 @@ export default function ChangePasswordCard() {
             confirm={form.confirm}
             onPasswordChange={(newPassword) => setForm({ ...form, newPassword })}
             onConfirmChange={(confirm) => setForm({ ...form, confirm })}
-            personalData={personalData}
             label="Nueva contraseña"
             confirmLabel="Confirmar nueva contraseña"
           />

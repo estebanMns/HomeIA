@@ -89,7 +89,7 @@ public class PasswordResetService {
         UserEntity user = userRepository.findById(entity.getUserId())
                 .filter(UserEntity::isActive)
                 .orElseThrow(() -> ApiException.badRequest("El enlace no es válido. Solicita uno nuevo"));
-        PasswordPolicy.validate(newPassword, user.getFullName(), user.getEmail());
+        PasswordPolicy.validate(newPassword);
         if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
             throw ApiException.badRequest("La nueva contraseña debe ser distinta de la anterior");
         }

@@ -65,7 +65,7 @@ export default function HomePage() {
   };
 
   const [newUserConfirm, setNewUserConfirm] = useState('');
-  const newUserPasswordOk = isNewPasswordValid(newUser.password, newUserConfirm, [newUser.fullName, newUser.email]);
+  const newUserPasswordOk = isNewPasswordValid(newUser.password, newUserConfirm);
 
   const createUser = (e: FormEvent) => {
     e.preventDefault();
@@ -137,7 +137,6 @@ export default function HomePage() {
                     confirm={newUserConfirm}
                     onPasswordChange={(password) => setNewUser({ ...newUser, password })}
                     onConfirmChange={setNewUserConfirm}
-                    personalData={[newUser.fullName, newUser.email]}
                     label="Contraseña inicial"
                   />
                 </div>
