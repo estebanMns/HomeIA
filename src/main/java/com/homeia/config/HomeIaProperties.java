@@ -32,6 +32,22 @@ public record HomeIaProperties(
 
     public record Mqtt(boolean enabled, String brokerUrl, String username, String password,
                        String clientId, String topicPrefix) {
+        /** Quita espacios y comillas que se cuelan al copiar valores en el .env. */
+        public Mqtt {
+            brokerUrl = clean(brokerUrl);
+            username = clean(username);
+            clientId = clean(clientId);
+            topicPrefix = clean(topicPrefix);
+        }
+
+        static String clean(String value) {
+            if (value == null) return null;
+            String v = value.trim();
+            while (v.length() >= 2 && ((v.startsWith("\"") && v.endsWith("\"")) || (v.startsWith("'") && v.endsWith("'")))) {
+                v = v.substring(1, v.length() - 1).trim();
+            }
+            return v;
+        }
     }
 
     /**
