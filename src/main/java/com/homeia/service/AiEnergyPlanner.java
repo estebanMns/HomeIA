@@ -5,6 +5,7 @@ import com.homeia.config.HomeIaProperties;
 import com.homeia.integration.GeminiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -71,7 +72,7 @@ public class AiEnergyPlanner {
         try {
             return geminiClient.generateJson(INSTRUCTIONS + snapshotJson).map(root -> parse(root, knownDeviceIds));
         } catch (Exception e) {
-            log.warn("Gemini no pudo planificar la casa {}: {}", homeId, e.getMessage());
+            log.warn("Gemini no pudo planificar la casa {}: {}", homeId, NestedExceptionUtils.getMostSpecificCause(e).toString());
             return Optional.empty();
         }
     }

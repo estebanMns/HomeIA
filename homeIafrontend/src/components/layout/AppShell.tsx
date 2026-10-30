@@ -65,9 +65,19 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const [dark, setDark] = useState(false);
   const [home, setHome] = useState<HomeData | null>(null);
+  const [online, setOnline] = useState<boolean | null>(null);
 
   useEffect(() => {
     api.home().then(setHome).catch(() => setHome(null));
+  }, []);
+
+  // El indicador de la barra superior refleja si el backend responde de verdad.
+  useEffect(() => {
+    const check = () =>
+      api.systemHealth().then(() => setOnline(true)).catch(() => setOnline(false));
+    check();
+    const id = setInterval(check, 30000);
+    return () => clearInterval(id);
   }, []);
 
   const title = titleMap[pathname] ?? 'HomeIA';
@@ -138,8 +148,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <div className="top-subtitle">{home?.name ?? ''}</div>
           </div>
           <div className="top-actions">
-            <div className="live-pill">
-              <span /> Datos en vivo
+            <div
+              className="live-pill"
+              style={online === false ? { color: 'var(--red)' } : undefined}
+              title={online === false ? 'El backend no responde' : undefined}
+            >
+              <span style={online === false ? { background: 'var(--red)' } : undefined} />
+              {online === null ? 'Conectando…' : online ? 'Datos en vivo' : 'Sin conexión'}
             </div>
             <Button variant="ghost" size="icon" onClick={() => setDark(!dark)}>
               {dark ? <Sun size={19} /> : <Moon size={19} />}

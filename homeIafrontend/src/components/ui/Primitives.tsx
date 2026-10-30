@@ -12,6 +12,7 @@ export function Button({
   onClick,
   disabled,
   className = '',
+  type = 'button',
 }: {
   children: ReactNode;
   variant?: 'primary' | 'outline' | 'ghost' | 'danger';
@@ -19,9 +20,12 @@ export function Button({
   onClick?: () => void;
   disabled?: boolean;
   className?: string;
+  /** Por defecto "button": dentro de un formulario, solo el botón de envío debe enviarlo. */
+  type?: 'button' | 'submit';
 }) {
   return (
     <button
+      type={type}
       disabled={disabled}
       onClick={onClick}
       className={`btn btn-${variant} btn-${size} ${className}`}

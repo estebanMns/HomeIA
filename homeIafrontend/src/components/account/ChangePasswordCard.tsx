@@ -49,7 +49,7 @@ export default function ChangePasswordCard() {
             confirmLabel="Confirmar nueva contraseña"
           />
         </div>
-        <Button variant="primary" disabled={busy || !passwordOk}>{busy ? 'Guardando…' : 'Cambiar contraseña'}</Button>
+        <Button type="submit" variant="primary" disabled={busy || !passwordOk}>{busy ? 'Guardando…' : 'Cambiar contraseña'}</Button>
       </form>
     </Card>
   );

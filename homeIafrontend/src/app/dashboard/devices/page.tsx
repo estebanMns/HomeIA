@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useMemo, useState } from 'react';
-import { Lightbulb, Plug, Plus, Radio, Search, ShieldCheck, Trash2, Wifi, WifiOff } from 'lucide-react';
+import { Lightbulb, Pencil, Plug, Plus, Radio, Search, ShieldCheck, Trash2, Wifi, WifiOff } from 'lucide-react';
 import { api, ApiError } from '@/services/api';
 import { useAsync } from '@/hooks/useAsync';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +19,15 @@ interface Data {
   rooms: Room[];
 }
 
+interface EditDraft {
+  id: string;
+  name: string;
+  roomId: string;
+  critical: boolean;
+  /** Vacío = usar el umbral de la casa. */
+  alertWatts: string;
+}
+
 export default function DevicesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
@@ -32,6 +41,7 @@ export default function DevicesPage() {
   const [message, setMessage] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', type: 'LIGHT' as DeviceType, roomId: '', critical: false });
+  const [editing, setEditing] = useState<EditDraft | null>(null);
 
   const roomName = useMemo(() => new Map((data?.rooms ?? []).map((r) => [r.id, r.name])), [data]);
 
@@ -81,6 +91,31 @@ export default function DevicesPage() {
       });
       setForm({ ...form, name: '' });
     }, 'Dispositivo registrado');
+  };
+
+  const startEdit = (d: Device) =>
+    setEditing({
+      id: d.id,
+      name: d.name,
+      roomId: d.roomId ?? '',
+      critical: d.critical,
+      alertWatts: d.consumptionAlertWatts ? String(d.consumptionAlertWatts) : '',
+    });
+
+  /** Sin habitación se envía clearRoom; un umbral vacío (0) vuelve al de la casa. */
+  const saveEdit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!editing) return;
+    run(editing.id, async () => {
+      await api.updateDevice(editing.id, {
+        name: editing.name,
+        roomId: editing.roomId || undefined,
+        clearRoom: editing.roomId === '',
+        critical: editing.critical,
+        consumptionAlertWatts: editing.alertWatts === '' ? 0 : Number(editing.alertWatts),
+      });
+      setEditing(null);
+    }, 'Dispositivo actualizado');
   };
 
   return (
@@ -199,16 +234,21 @@ export default function DevicesPage() {
                     <span className="muted">—</span>
                   )}
                   {isAdmin ? (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      disabled={busyId === d.id}
-                      onClick={() => {
-                        if (window.confirm(`¿Eliminar ${d.name}?`)) run(d.id, () => api.deleteDevice(d.id), 'Dispositivo eliminado');
-                      }}
-                    >
-                      <Trash2 size={16} />
-                    </Button>
+                    <div style={{ display: 'flex' }}>
+                      <Button variant="ghost" size="icon" disabled={busyId === d.id} onClick={() => startEdit(d)}>
+                        <Pencil size={16} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={busyId === d.id}
+                        onClick={() => {
+                          if (window.confirm(`¿Eliminar ${d.name}?`)) run(d.id, () => api.deleteDevice(d.id), 'Dispositivo eliminado');
+                        }}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
                   ) : (
                     <span />
                   )}
@@ -218,6 +258,40 @@ export default function DevicesPage() {
           )}
         </div>
       </Card>
+
+      {editing && (
+        <div className="modal-backdrop" onClick={() => setEditing(null)}>
+          <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={saveEdit}>
+            <div className="modal-title">Editar dispositivo</div>
+            <label className="field">
+              <span>Nombre</span>
+              <div><input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} required /></div>
+            </label>
+            <label className="field">
+              <span>Habitación</span>
+              <div>
+                <select value={editing.roomId} onChange={(e) => setEditing({ ...editing, roomId: e.target.value })} style={{ width: '100%', border: 0, background: 'transparent', color: 'var(--text)' }}>
+                  <option value="">Sin habitación</option>
+                  {data?.rooms.map((r) => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+            </label>
+            <label className="field">
+              <span>Umbral de consumo excesivo (W)</span>
+              <div><input type="number" min={1} placeholder="Vacío = el de la casa" value={editing.alertWatts} onChange={(e) => setEditing({ ...editing, alertWatts: e.target.value })} /></div>
+            </label>
+            <label className="badge badge-gray" style={{ height: 38, padding: '0 12px', cursor: 'pointer', marginBottom: 12 }}>
+              <input type="checkbox" checked={editing.critical} onChange={(e) => setEditing({ ...editing, critical: e.target.checked })} /> Crítico (la automatización nunca lo apaga)
+            </label>
+            <div className="modal-actions">
+              <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
+              <button type="submit" className="btn btn-primary btn-md" disabled={busyId === editing.id}>Guardar</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

@@ -23,6 +23,7 @@ import com.homeia.persistence.RoomRepository;
 import com.homeia.security.AuthPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -228,7 +229,8 @@ public class AutomationService {
                             .append(' ').append(e.isPresent()).append('\n'));
             return geminiClient.estimateReturnProbability(history.toString());
         } catch (Exception e) {
-            log.warn("Gemini no respondió para la habitación {}: {}", room.getName(), e.getMessage());
+            log.warn("Gemini no respondió para la habitación {}: {}", room.getName(),
+                    NestedExceptionUtils.getMostSpecificCause(e).toString());
             return Optional.empty();
         }
     }

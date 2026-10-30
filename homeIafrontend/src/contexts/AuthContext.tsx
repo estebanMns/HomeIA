@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
-import { api, SESSION_EXPIRED_EVENT, tokenStore } from '@/services/api';
+import { api, ApiError, SESSION_EXPIRED_EVENT, tokenStore } from '@/services/api';
 import type { User } from '@/types';
 
 interface AuthContextType {
@@ -18,13 +18,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restaurar sesión guardada en este navegador
+  // Restaurar la sesión guardada y confirmarla con el backend: el rol, el nombre o el estado
+  // del usuario pudieron cambiar desde el último ingreso.
   useEffect(() => {
-    const stored = tokenStore.user();
-    if (stored && tokenStore.access()) {
-      setUser(stored);
-    }
-    setIsLoading(false);
+    let cancelled = false;
+    (async () => {
+      const stored = tokenStore.user();
+      let current: User | null = null;
+      if (stored && tokenStore.access()) {
+        try {
+          current = await api.me();
+          tokenStore.saveUser(current);
+        } catch (e) {
+          // Sin conexión se conserva la sesión guardada; cualquier rechazo del backend la cierra.
+          current = e instanceof ApiError && e.status === 0 ? stored : null;
+          if (!current) tokenStore.clear();
+        }
+      }
+      if (!cancelled) {
+        setUser(current);
+        setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const clearSession = useCallback(() => {

@@ -45,7 +45,7 @@ public class WifiController {
     }
 
     public record ImportBody(@NotBlank @Size(max = 64) String externalId, @Size(max = 120) String name,
-                             @NotNull DeviceType type, UUID roomId, boolean critical) {
+                             @NotNull DeviceType type, UUID roomId, Boolean critical) {
     }
 
     @GetMapping("/status")
@@ -68,7 +68,7 @@ public class WifiController {
     public DeviceController.DeviceDto importTuya(@AuthenticationPrincipal AuthPrincipal principal,
                                                  @Valid @RequestBody ImportBody body) {
         return DeviceController.DeviceDto.from(deviceService.importTuya(principal, body.externalId(), body.name(),
-                body.type(), body.roomId(), body.critical()));
+                body.type(), body.roomId(), Boolean.TRUE.equals(body.critical())));
     }
 
     /** Lee ahora el estado de todos los dispositivos Tuya, sin esperar al siguiente ciclo. */

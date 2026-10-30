@@ -1,11 +1,11 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { api, ApiError } from '@/services/api';
 import { useAsync } from '@/hooks/useAsync';
 import { useAuth } from '@/contexts/AuthContext';
-import type { BillStatus, MeterReading, TariffInput } from '@/types';
+import type { BillStatus, MeterReading, TariffInput, TariffPeriod } from '@/types';
 import { Badge, Button, Card, SectionTitle } from '@/components/ui/Primitives';
 
 const money = (n?: number) => (n === undefined ? '—' : `$${Math.round(n).toLocaleString('es-CO')}`);
@@ -38,6 +38,8 @@ export default function BillingPanel() {
   }, []);
 
   const [tariff, setTariff] = useState<TariffInput>(emptyTariff);
+  /** Id de la tarifa que se está editando; null = se crea un período nuevo. */
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [reading, setReading] = useState({ readingKwh: '', readAt: '' });
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -59,9 +61,22 @@ export default function BillingPanel() {
   const saveTariff = (e: FormEvent) => {
     e.preventDefault();
     run(async () => {
-      await api.createTariff(tariff);
+      if (editingId) await api.updateTariff(editingId, tariff);
+      else await api.createTariff(tariff);
       setTariff(emptyTariff);
-    }, 'Tarifa guardada');
+      setEditingId(null);
+    }, editingId ? 'Tarifa actualizada' : 'Tarifa guardada');
+  };
+
+  const startEdit = (t: TariffPeriod) => {
+    const { id, ...input } = t;
+    setEditingId(id);
+    setTariff(input);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setTariff(emptyTariff);
   };
 
   const saveReading = (e: FormEvent) => {
@@ -100,6 +115,11 @@ export default function BillingPanel() {
                 )}
               </div>
               {b.total !== undefined && <Badge tone="green">Total {money(b.total)}</Badge>}
+              {isAdmin && (
+                <Button variant="ghost" size="icon" disabled={busy} onClick={() => startEdit(b.tariff)}>
+                  <Pencil size={16} />
+                </Button>
+              )}
               {isAdmin && (
                 <Button variant="ghost" size="icon" disabled={busy} onClick={() => {
                   if (window.confirm('¿Eliminar esta tarifa?')) run(() => api.deleteTariff(b.tariff.id), 'Tarifa eliminada');
@@ -141,7 +161,10 @@ export default function BillingPanel() {
 
       {isAdmin && (
         <Card style={{ marginTop: 16 }}>
-          <SectionTitle title="Nuevo período de facturación" subtitle="Datos tomados del recibo: el período va de una lectura a la siguiente" />
+          <SectionTitle
+            title={editingId ? 'Editar período de facturación' : 'Nuevo período de facturación'}
+            subtitle="Datos tomados del recibo: el período va de una lectura a la siguiente"
+          />
           <form onSubmit={saveTariff}>
             <div className="settings-grid">
               <label className="field"><span>Lectura inicial (fecha)</span><div><input type="date" value={tariff.periodStart} onChange={(e) => setTariff({ ...tariff, periodStart: e.target.value })} required /></div></label>
@@ -154,7 +177,12 @@ export default function BillingPanel() {
               <label className="field"><span>Alumbrado público ($)</span><div><input type="number" min="0" step="1" value={tariff.publicLighting} onChange={(e) => setTariff({ ...tariff, publicLighting: Number(e.target.value) })} /></div></label>
             </div>
             <label className="field"><span>Ajuste monetario ($)</span><div><input type="number" step="1" value={tariff.adjustment} onChange={(e) => setTariff({ ...tariff, adjustment: Number(e.target.value) })} /></div></label>
-            <button type="submit" className="btn btn-primary btn-md" disabled={busy}><Plus size={16} /> Guardar período</button>
+            <div className="quick-actions">
+              <button type="submit" className="btn btn-primary btn-md" disabled={busy}>
+                {editingId ? 'Guardar cambios' : <><Plus size={16} /> Guardar período</>}
+              </button>
+              {editingId && <Button variant="outline" onClick={cancelEdit}>Cancelar</Button>}
+            </div>
           </form>
         </Card>
       )}

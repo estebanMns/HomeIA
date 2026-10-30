@@ -37,7 +37,7 @@ Las siguientes propiedades se cargan en `application.properties`:
 
 ```properties
 gemini.api-key=${GEMINI_API_KEY}
-gemini.model-id=gemini-2.0-flash
+GEMINI_MODEL=gemini-3.8-flash
 ```
 
 ## Flujo de Predicción
@@ -132,7 +132,7 @@ Si una habitación se vacía (probabilidad < threshold), se apagan dispositivos 
 
 ## Costos API
 
-- **Modelo:** gemini-2.0-flash (muy económico)
+- **Modelo:** gemini-3.8-flash (configurable con GEMINI_MODEL)
 - **Rate Limiting:** Respeta los límites de Google Cloud
 - **Caching:** Reduce llamadas innecesarias a 1 por habitación cada 5 min
 

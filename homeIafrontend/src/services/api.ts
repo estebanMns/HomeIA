@@ -100,6 +100,10 @@ export const tokenStore = {
       document.cookie = `accessToken=${session.accessToken}; path=/; max-age=${session.expiresIn}; SameSite=Lax`;
     }
   },
+  /** Actualiza el usuario guardado con lo que dice el backend (rol o nombre pudieron cambiar). */
+  saveUser(user: User) {
+    writeStorage(STORAGE.user, JSON.stringify(user));
+  },
   clear() {
     writeStorage(STORAGE.access, null);
     writeStorage(STORAGE.refresh, null);
@@ -244,6 +248,7 @@ export const api = {
   billingBills: () => request<BillStatus[]>('GET', '/billing/bills'),
   billingTariffs: () => request<TariffPeriod[]>('GET', '/billing/tariffs'),
   createTariff: (body: TariffInput) => request<TariffPeriod>('POST', '/billing/tariffs', body),
+  updateTariff: (id: string, body: TariffInput) => request<TariffPeriod>('PUT', `/billing/tariffs/${id}`, body),
   deleteTariff: (id: string) => request<void>('DELETE', `/billing/tariffs/${id}`),
   meterReadings: () => request<MeterReading[]>('GET', '/billing/meter-readings'),
   addMeterReading: (body: { readingKwh: number; readAt: string }) =>

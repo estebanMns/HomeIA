@@ -40,15 +40,15 @@ public class DeviceController {
         }
     }
 
-    public record DeviceBody(@NotBlank String name, @NotNull DeviceType type, UUID roomId, boolean critical) {
+    public record DeviceBody(@NotBlank String name, @NotNull DeviceType type, UUID roomId, Boolean critical) {
     }
 
     /** consumptionAlertWatts: umbral propio del dispositivo; null no lo cambia, 0 o negativo vuelve al de la casa. */
-    public record UpdateDeviceBody(String name, UUID roomId, boolean clearRoom, Boolean critical,
+    public record UpdateDeviceBody(String name, UUID roomId, Boolean clearRoom, Boolean critical,
                                    Double consumptionAlertWatts) {
     }
 
-    public record CommandBody(@NotNull DeviceService.Command command, Integer brightness, boolean confirmCritical) {
+    public record CommandBody(@NotNull DeviceService.Command command, Integer brightness, Boolean confirmCritical) {
     }
 
     @GetMapping
@@ -67,14 +67,16 @@ public class DeviceController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public DeviceDto create(@AuthenticationPrincipal AuthPrincipal principal, @Valid @RequestBody DeviceBody body) {
-        return DeviceDto.from(deviceService.create(principal, body.name(), body.type(), body.roomId(), body.critical()));
+        return DeviceDto.from(deviceService.create(principal, body.name(), body.type(), body.roomId(),
+                Boolean.TRUE.equals(body.critical())));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public DeviceDto update(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id,
                             @RequestBody UpdateDeviceBody body) {
-        return DeviceDto.from(deviceService.update(principal, id, body.name(), body.roomId(), body.clearRoom(),
+        return DeviceDto.from(deviceService.update(principal, id, body.name(), body.roomId(),
+                Boolean.TRUE.equals(body.clearRoom()),
                 body.critical(), body.consumptionAlertWatts()));
     }
 
@@ -89,6 +91,6 @@ public class DeviceController {
     public DeviceDto command(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id,
                              @Valid @RequestBody CommandBody body) {
         return DeviceDto.from(deviceService.command(principal, id, body.command(), body.brightness(),
-                body.confirmCritical()));
+                Boolean.TRUE.equals(body.confirmCritical())));
     }
 }

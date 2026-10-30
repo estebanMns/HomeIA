@@ -15,13 +15,20 @@ import java.util.Optional;
 @Component
 public class GeminiClient {
 
+    /**
+     * Razonamiento mínimo: las tareas son cortas y el razonamiento consume tokens de salida y tiempo.
+     * Sin límite de tokens de salida, porque con uno bajo el razonamiento lo agota y la respuesta llega vacía.
+     */
+    private static final Map<String, Object> LOW_THINKING = Map.of("thinkingLevel", "low");
+
     private final HomeIaProperties.Gemini properties;
     private final RestClient restClient;
 
     public GeminiClient(HomeIaProperties properties) {
         this.properties = properties.gemini();
-        // Gemini puede tardar varios segundos en generar el plan; más de 20 s se trata como "no respondió"
-        this.restClient = HttpClients.withTimeouts(this.properties.baseUrl(), Duration.ofSeconds(5), Duration.ofSeconds(20));
+        // Los modelos Gemini 3 razonan antes de responder y suelen tardar entre 20 y 60 s
+        this.restClient = HttpClients.withTimeouts(this.properties.baseUrl(), Duration.ofSeconds(5),
+                Duration.ofSeconds(this.properties.timeoutSeconds()));
     }
 
     public boolean configured() {
@@ -37,7 +44,7 @@ public class GeminiClient {
 
         String payload = Json.write(Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                "generationConfig", Map.of("temperature", 0, "maxOutputTokens", 16)));
+                "generationConfig", Map.of("temperature", 0, "thinkingConfig", LOW_THINKING)));
 
         String response = restClient.post()
                 .uri("/models/{model}:generateContent", properties.model())
@@ -56,7 +63,8 @@ public class GeminiClient {
     public Optional<JsonNode> generateJson(String prompt) {
         String payload = Json.write(Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                "generationConfig", Map.of("temperature", 0, "responseMimeType", "application/json")));
+                "generationConfig", Map.of("temperature", 0, "responseMimeType", "application/json",
+                        "thinkingConfig", LOW_THINKING)));
 
         String response = restClient.post()
                 .uri("/models/{model}:generateContent", properties.model())

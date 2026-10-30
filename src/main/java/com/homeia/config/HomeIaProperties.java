@@ -73,7 +73,8 @@ public record HomeIaProperties(
         }
     }
 
-    public record Gemini(String apiKey, String model, String baseUrl, long decisionIntervalSeconds) {
+    /** @param timeoutSeconds espera máxima por respuesta: los modelos Gemini 3 razonan y tardan decenas de segundos */
+    public record Gemini(String apiKey, String model, String baseUrl, long decisionIntervalSeconds, long timeoutSeconds) {
 
         public boolean configured() {
             return apiKey != null && !apiKey.isBlank();

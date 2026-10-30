@@ -111,6 +111,12 @@ export default function HomePage() {
                 <Badge tone={u.role === 'ADMIN' ? 'purple' : 'gray'}>{u.role === 'ADMIN' ? 'Admin' : 'Miembro'}</Badge>
                 {isAdmin && u.id !== user?.id && (
                   <>
+                    <Button variant="outline" size="sm" disabled={busy} onClick={() => {
+                      const role: UserRole = u.role === 'ADMIN' ? 'MEMBER' : 'ADMIN';
+                      run(() => api.updateUser(u.id, { role }), role === 'ADMIN' ? `${u.fullName} ahora es administrador` : `${u.fullName} ahora es miembro`);
+                    }}>
+                      {u.role === 'ADMIN' ? 'Hacer miembro' : 'Hacer admin'}
+                    </Button>
                     <Button variant="outline" size="sm" disabled={busy} onClick={() => run(() => api.updateUser(u.id, { active: !u.active }), u.active ? 'Usuario desactivado' : 'Usuario activado')}>
                       {u.active ? 'Desactivar' : 'Activar'}
                     </Button>
