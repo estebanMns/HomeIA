@@ -1,0 +1,26 @@
+# Broker MQTT para los dispositivos propios (ESP32, etc.). Ver docs/MQTT.md.
+# Levantar:  docker compose -f compose.mqtt.yaml up -d
+# Usuario y contraseña se leen de MQTT_USERNAME y MQTT_PASSWORD en el .env (los mismos que usa el backend).
+services:
+  mosquitto:
+    image: 'eclipse-mosquitto:2.0.20'
+    container_name: homeia-mosquitto
+    restart: unless-stopped
+    ports:
+      - '1883:1883'
+    environment:
+      MQTT_USERNAME: '${MQTT_USERNAME:?Define MQTT_USERNAME en .env}'
+      MQTT_PASSWORD: '${MQTT_PASSWORD:?Define MQTT_PASSWORD en .env}'
+    # El archivo de contraseñas se genera en cada arranque desde el .env: cambiar la contraseña
+    # solo requiere editar el .env y reiniciar el contenedor.
+    command: >
+      sh -c 'mosquitto_passwd -b -c /mosquitto/data/passwd "$$MQTT_USERNAME" "$$MQTT_PASSWORD"
+      && chown mosquitto:mosquitto /mosquitto/data/passwd
+      && chmod 0700 /mosquitto/data/passwd
+      && exec mosquitto -c /mosquitto/config/mosquitto.conf'
+    volumes:
+      - './docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro'
+      - 'mosquitto-data:/mosquitto/data'
+
+volumes:
+  mosquitto-data:

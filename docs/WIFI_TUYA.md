@@ -71,4 +71,4 @@ A partir de ahí aparece en **Dispositivos** y la automatización lo controla co
 
 Para dispositivos que programes tú (por ejemplo un ESP32), HomeIA sigue aceptando MQTT:
 el dispositivo publica su estado en `homeia/devices/{id}/state` y recibe órdenes en `homeia/devices/{id}/command`.
-Requiere un broker MQTT y `MQTT_ENABLED=true`.
+Requiere un broker MQTT y `MQTT_ENABLED=true`: ver [MQTT.md](MQTT.md) para levantarlo con Docker.
