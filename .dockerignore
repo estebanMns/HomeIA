@@ -1,0 +1,13 @@
+# El .env tiene las credenciales: nunca debe entrar en la imagen.
+.env
+.env.*
+target
+homeIafrontend
+docker
+.git
+.github
+.vscode
+.idea
+*.md
+compose*.yaml
+start-dev.sh
