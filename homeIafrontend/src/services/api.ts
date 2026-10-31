@@ -16,6 +16,7 @@ import type {
   EnergySummary,
   Home,
   Page,
+  PerformanceMetricSummary,
   Room,
   RoomEnergy,
   Session,
@@ -341,4 +342,7 @@ export const api = {
     request<Page<AuditEntry>>('GET', `/audit${query(filters)}`),
   systemHealth: () => request<SystemHealth>('GET', '/system/health'),
   systemMetrics: () => request<SystemMetrics>('GET', '/system/metrics'),
+
+  // Rendimiento: p75 de las métricas que reportan los navegadores de la casa
+  performanceSummary: () => request<{ metrics: PerformanceMetricSummary[] }>('GET', '/performance/summary'),
 };

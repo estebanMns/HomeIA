@@ -279,3 +279,13 @@ export interface TuyaCloudDevice {
   /** Id del dispositivo en HomeIA si ya se agregó a la casa. */
   importedAs?: string | null;
 }
+
+/** Resumen de una métrica de rendimiento reportada por los navegadores de la casa (p75). */
+export interface PerformanceMetricSummary {
+  name: 'LCP' | 'INP' | 'CLS' | 'FCP' | 'TTFB' | 'API_LATENCY';
+  count: number;
+  p75: number;
+  rating: 'good' | 'needs-improvement' | 'poor' | null;
+  good: number;
+  poor: number;
+}
