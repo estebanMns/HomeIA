@@ -29,6 +29,7 @@ import type {
   WifiStatus,
   TuyaCloudDevice,
 } from '@/types';
+import { perfStore, type MetricSample } from '@/lib/perfStore';
 
 /**
  * Dirección base de la API. Todas las rutas del backend empiezan por /api (y solo ahí aplica CORS),
@@ -138,7 +139,26 @@ async function refreshSession(): Promise<boolean> {
   return refreshing;
 }
 
+/** Mide la duración de cada llamada: queda en perfStore y como marca en la pestaña Performance de DevTools. */
 async function request<T>(method: Method, path: string, body?: unknown, retry = true): Promise<T> {
+  const start = performance.now();
+  let ok = false;
+  try {
+    const result = await send<T>(method, path, body, retry);
+    ok = true;
+    return result;
+  } finally {
+    const end = performance.now();
+    perfStore.recordApiCall(method, path, end - start, ok);
+    try {
+      performance.measure(`api ${method} ${path.split('?')[0]}`, { start, end });
+    } catch {
+      // Navegadores sin User Timing nivel 3: la métrica ya quedó en perfStore.
+    }
+  }
+}
+
+async function send<T>(method: Method, path: string, body?: unknown, retry = true): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = tokenStore.access();
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -156,7 +176,7 @@ async function request<T>(method: Method, path: string, body?: unknown, retry = 
   }
 
   if (res.status === 401 && retry && token && (await refreshSession())) {
-    return request<T>(method, path, body, false);
+    return send<T>(method, path, body, false);
   }
   if (res.status === 401 && token) {
     tokenStore.clear();
@@ -185,6 +205,26 @@ function connectionErrorMessage(): string {
     ? ` Abriste la app desde ${page}: agrega esa dirección a CORS_ALLOWED_ORIGINS en el .env del backend y reinícialo, o abre http://localhost:3000.`
     : ' Si el backend está encendido, revisa que CORS_ALLOWED_ORIGINS incluya ' + (page || 'la dirección del frontend') + '.';
   return `No se pudo conectar con el backend en ${API_URL}. Verifica que esté encendido.${cors}`;
+}
+
+/**
+ * Envía métricas de rendimiento al backend. keepalive deja que la petición termine aunque se cierre
+ * la pestaña. No pasa por request() para no medirse a sí misma. Devuelve false si no se pudo enviar.
+ */
+export async function sendPerformanceMetrics(samples: MetricSample[]): Promise<boolean> {
+  const token = tokenStore.access();
+  if (!token || samples.length === 0) return false;
+  try {
+    const res = await fetch(`${API_URL}/performance/metrics`, {
+      method: 'POST',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ samples }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 function query(params: Record<string, string | number | boolean | undefined | null>): string {
