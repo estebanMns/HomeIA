@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useState } from 'react';
 import { Check, Eye, EyeOff, X } from 'lucide-react';
-import { PASSWORD_MAX_LENGTH, PASSWORD_RULES, passwordStrength, passwordViolations } from '@/lib/passwordPolicy';
+import { PASSWORD_MAX_LENGTH, PASSWORD_RULES, passwordStrength, passwordViolations, type PersonalData } from '@/lib/passwordPolicy';
 
 interface Props {
   password: string;
@@ -11,13 +11,15 @@ interface Props {
   onConfirmChange: (value: string) => void;
   label?: string;
   confirmLabel?: string;
+  /** Nombre y correo del usuario, que la contraseña no puede contener. */
+  personal?: PersonalData;
 }
 
 const STRENGTH_LABEL = ['', 'Débil', 'Aceptable', 'Segura', 'Muy segura'] as const;
 
 /** True si la contraseña cumple todas las reglas y coincide con la confirmación. */
-export function isNewPasswordValid(password: string, confirm: string): boolean {
-  return passwordViolations(password).size === 0 && password === confirm;
+export function isNewPasswordValid(password: string, confirm: string, personal?: PersonalData): boolean {
+  return passwordViolations(password, personal).size === 0 && password === confirm;
 }
 
 /**
@@ -31,10 +33,13 @@ export default function NewPasswordFields({
   onConfirmChange,
   label = 'Contraseña',
   confirmLabel = 'Repite la contraseña',
+  personal,
 }: Props) {
   const [visible, setVisible] = useState(false);
   const ids = useId();
-  const failed = useMemo(() => passwordViolations(password), [password]);
+  const email = personal?.email;
+  const fullName = personal?.fullName;
+  const failed = useMemo(() => passwordViolations(password, { email, fullName }), [password, email, fullName]);
   const strength = passwordStrength(password, failed);
   const touched = password.length > 0;
   const confirmTouched = confirm.length > 0;

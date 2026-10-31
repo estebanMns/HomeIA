@@ -66,7 +66,7 @@ export default function HomePage() {
   };
 
   const [newUserConfirm, setNewUserConfirm] = useState('');
-  const newUserPasswordOk = isNewPasswordValid(newUser.password, newUserConfirm);
+  const newUserPasswordOk = isNewPasswordValid(newUser.password, newUserConfirm, newUser);
 
   const createUser = (e: FormEvent) => {
     e.preventDefault();
@@ -145,6 +145,7 @@ export default function HomePage() {
                     onPasswordChange={(password) => setNewUser({ ...newUser, password })}
                     onConfirmChange={setNewUserConfirm}
                     label="Contraseña inicial"
+                    personal={newUser}
                   />
                 </div>
                 <label className="field">

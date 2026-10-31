@@ -39,7 +39,7 @@ public class UserService {
         if (fullName == null || fullName.isBlank()) {
             throw ApiException.badRequest("El nombre es obligatorio");
         }
-        PasswordPolicy.validate(password);
+        PasswordPolicy.validate(password, cleanEmail, fullName);
         if (userRepository.existsByEmailIgnoreCase(cleanEmail)) {
             throw ApiException.conflict("Ya existe un usuario con ese correo");
         }
@@ -83,7 +83,7 @@ public class UserService {
             user.setActive(active);
         }
         if (password != null && !password.isBlank()) {
-            PasswordPolicy.validate(password);
+            PasswordPolicy.validate(password, user.getEmail(), user.getFullName());
             user.setPasswordHash(passwordEncoder.encode(password));
             refreshTokenRepository.deleteAllByUserId(userId);
         }
@@ -99,7 +99,7 @@ public class UserService {
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             throw ApiException.unauthorized("La contraseña actual no es correcta");
         }
-        PasswordPolicy.validate(newPassword);
+        PasswordPolicy.validate(newPassword, user.getEmail(), user.getFullName());
         if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
             throw ApiException.badRequest("La nueva contraseña debe ser distinta de la actual");
         }

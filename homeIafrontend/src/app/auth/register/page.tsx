@@ -28,7 +28,7 @@ export default function RegisterPage() {
       setError('Escribe tu nombre completo');
       return;
     }
-    if (!isNewPasswordValid(form.password, form.confirm)) {
+    if (!isNewPasswordValid(form.password, form.confirm, form)) {
       setError('Revisa la contraseña: debe cumplir todas las reglas y coincidir con la confirmación');
       return;
     }
@@ -111,12 +111,13 @@ export default function RegisterPage() {
             confirm={form.confirm}
             onPasswordChange={(password) => setForm({ ...form, password })}
             onConfirmChange={(confirm) => setForm({ ...form, confirm })}
+            personal={form}
           />
 
           <button
             type="submit"
             className="btn btn-primary btn-md login-button"
-            disabled={submitting || !isNewPasswordValid(form.password, form.confirm)}
+            disabled={submitting || !isNewPasswordValid(form.password, form.confirm, form)}
           >
             {submitting ? 'Creando cuenta…' : 'Crear cuenta'} {!submitting && <ChevronRight size={17} />}
           </button>
