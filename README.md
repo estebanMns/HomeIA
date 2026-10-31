@@ -1,260 +1,59 @@
-# HomeIA - Sistema Inteligente de Control del Hogar
+# HomeIA
 
-Sistema completo de automatización y control del hogar con IoT, basado en arquitectura de microservicios con Spring Boot y Next.js.
+Control inteligente de energía del hogar. Detecta habitaciones vacías, apaga luces y tomacorrientes no críticos, alerta consumos excesivos y posibles fugas, y calcula la factura con la tarifa real del recibo. La automatización usa Gemini con reglas de respaldo y guardarraíles en código.
 
-## 📁 Estructura del Proyecto
+- **Backend:** Spring Boot 4.1 (Java 21), PostgreSQL con Flyway (esquema propio `homeia`) y JWT con refresh tokens.
+- **Frontend:** Next.js 16 (App Router) y TypeScript, en `homeIafrontend/`.
+- **Dispositivos:** Tuya / Smart Life por la nube ([docs/WIFI_TUYA.md](docs/WIFI_TUYA.md)), o propios por MQTT ([docs/MQTT.md](docs/MQTT.md)).
+- **Notificaciones:** WhatsApp Cloud API ([docs/WHATSAPP_ALERTS.md](docs/WHATSAPP_ALERTS.md)) y correo SMTP para recuperar la contraseña.
 
-```
-HomeIA/
-├── src/                          # Backend (Spring Boot)
-│   ├── main/java/com/home/ia/   # Código Java
-│   └── main/resources/          # Configuración
-├── homeIafrontend/              # Frontend (Next.js + TypeScript + Tailwind)
-│   ├── src/
-│   │   ├── app/                 # Páginas y rutas
-│   │   ├── components/          # Componentes React
-│   │   ├── contexts/            # Context API (Autenticación)
-│   │   ├── services/            # Servicios API
-│   │   ├── types/               # Tipos TypeScript
-│   │   └── utils/               # Utilidades
-│   └── package.json
-├── pom.xml                       # Dependencias Backend
-├── start-dev.sh                  # Script para iniciar todo
-└── README.md                     # Este archivo
-```
-
-## 🚀 Inicio Rápido
-
-### Opción 1: Script Automatizado (Recomendado)
-
-```bash
-cd /Users/estebanmeneses/Desktop/HomeIA
-./start-dev.sh
-```
-
-### Opción 2: Manual
-
-**Terminal 1 - Backend:**
-```bash
-cd /Users/estebanmeneses/Desktop/HomeIA
-mvn spring-boot:run
-```
-
-**Terminal 2 - Frontend:**
-```bash
-cd /Users/estebanmeneses/Desktop/HomeIA/homeIafrontend
-npm run dev
-```
-
-## 🌐 Acceso
-
-| Componente | URL | Descripción |
-|-----------|-----|-------------|
-| Frontend | http://localhost:3000 | Interfaz de usuario |
-| Backend | http://localhost:8080/api | API REST |
-| Swagger UI | http://localhost:8080/swagger-ui.html | Documentación API |
-| Prometheus | http://localhost:8080/actuator/prometheus | Métricas |
-
-## 🔐 Credenciales Demo
+## Estructura
 
 ```
-Email:    andrea@homeia.co
-Password: <la que definiste en /setup>
+src/main/java/com/homeia/
+├── config/        Propiedades, seguridad, conversión de DATABASE_URL
+├── domain/        Enums del dominio
+├── integration/   Tuya, Gemini, MQTT y WhatsApp
+├── persistence/   Entidades y repositorios JPA
+├── scheduler/     Ciclos de automatización, sincronización y mantenimiento
+├── security/      JWT
+├── service/       Lógica de negocio y políticas (contraseñas, límites, alertas)
+└── web/           Controladores REST (/api/...)
+src/main/resources/db/homeia/migration/   Migraciones Flyway
+homeIafrontend/src/                       app/ (páginas), components/, services/api.ts
 ```
 
-## 🛠️ Tecnologías
+## Ejecutar en local
 
-### Backend
-- **Spring Boot 4.1.1** con Java 21
-- **JWT** para autenticación (HS256)
-- **Refresh Tokens** (7 días, máx 5 por usuario)
-- **MQTT** (Eclipse Paho) para IoT
-- **WebSocket/STOMP** para notificaciones en tiempo real
-- **Prometheus/Micrometer** para métricas
-- **H2 Database** (desarrollo) / PostgreSQL (producción)
-- **Flyway** para migraciones
+1. **Backend.** Crea un `.env` en la raíz con al menos `DATABASE_URL`, `SECRET_KEY` (32 bytes o más) y `CORS_ALLOWED_ORIGINS=http://localhost:3000`. Las demás variables están en [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md). Luego:
 
-### Frontend
-- **Next.js 15** (App Router)
-- **TypeScript** para tipado estático
-- **Tailwind CSS** para estilos
-- **React Context** para estado global
-- **Responsive Design**
+   ```
+   ./mvnw spring-boot:run
+   ```
 
-## 📋 Endpoints Principales
+2. **Frontend.** Crea `homeIafrontend/.env.local` con `NEXT_PUBLIC_API_URL=http://localhost:8080/api`. Luego:
 
-### Autenticación
-- `POST /api/auth/login` - Login
-- `POST /api/auth/refresh` - Refrescar token
-- `POST /api/auth/logout` - Logout
-- `GET /api/auth/validate` - Validar token
+   ```
+   cd homeIafrontend
+   npm install
+   npm run dev
+   ```
 
-### Dispositivos
-- `GET /api/devices` - Listar dispositivos
-- `GET /api/devices/{id}` - Obtener dispositivo
-- `POST /api/devices/{id}/toggle` - Toggle dispositivo
-- `POST /api/devices/{id}/turn-on` - Encender
-- `POST /api/devices/{id}/turn-off` - Apagar
+3. **Primera vez.** Abre http://localhost:3000. Si la base está vacía, `/setup` crea la casa y la cuenta de administrador.
 
-### Alertas
-- `GET /api/alerts` - Listar alertas
-- `POST /api/alerts/{id}/acknowledge` - Confirmar alerta
-- `POST /api/alerts/{id}/retry` - Reintentar
+## Verificar
 
-### Métricas
-- `GET /api/metrics/summary` - Resumen de métricas
-- `GET /api/metrics/health` - Estado del sistema
-- `GET /api/metrics/prometheus-info` - Info Prometheus
-
-## 🔄 Autenticación con JWT
-
-1. Login retorna `accessToken` (15 min) y `refreshToken` (7 días)
-2. Frontend almacena tokens en localStorage
-3. Cada request incluye `Authorization: Bearer <token>`
-4. Cuando expira, se usa refreshToken automáticamente
-5. Logout revoca todos los refreshTokens
-
-## 🌍 Características Principales
-
-- ✅ Autenticación segura con JWT
-- ✅ Refresh Tokens con rotación automática
-- ✅ Control de dispositivos IoT vía MQTT
-- ✅ Notificaciones en tiempo real (WebSocket)
-- ✅ Audit logging completo
-- ✅ Métricas de Prometheus
-- ✅ Documentación API Swagger
-- ✅ Interfaz responsive
-- ✅ Soporte multi-dispositivo
-
-## 📊 Auditoría
-
-Todas las operaciones se registran en la tabla `domain_events` con:
-- Timestamp
-- Usuario
-- Tipo de evento
-- Detalles JSON
-- IP y User-Agent
-
-## 🔧 Configuración
-
-### Backend (application.properties)
-```properties
-# BD
-spring.datasource.url=jdbc:h2:mem:homeIA (desarrollo)
-spring.jpa.hibernate.ddl-auto=create-drop
-
-# MQTT (opcional)
-mqtt.enabled=false
-mqtt.broker-url=tcp://localhost:1883
-
-# WebSocket
-spring.websocket.enabled=true
+```
+./mvnw test                                  # backend
+cd homeIafrontend && npx tsc --noEmit && npm run lint && npm run build
 ```
 
-### Frontend (.env.local)
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8080/api
-NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
-```
+## Desplegar
 
-## 📝 Variables de Entorno
+Frontend en Vercel y backend en Railway: [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
 
-### Backend
-- `GEMINI_API_KEY` (opcional) - Para funcionalidad IA
+## Seguridad
 
-### Frontend
-- `NEXT_PUBLIC_API_URL` - URL del backend
-- `NEXT_PUBLIC_WS_URL` - URL WebSocket
-
-## 🧪 Testing
-
-Backend:
-```bash
-mvn test
-```
-
-Frontend:
-```bash
-cd homeIafrontend
-npm test
-```
-
-## 📦 Build para Producción
-
-Backend:
-```bash
-mvn clean package
-java -jar target/ia-0.0.1-SNAPSHOT.jar
-```
-
-Frontend:
-```bash
-cd homeIafrontend
-npm run build
-npm start
-```
-
-## 🐛 Troubleshooting
-
-### Backend no inicia
-- Verificar que puerto 8080 está disponible
-- Ver logs: `tail -f /tmp/homeIA-backend.log`
-- Compilar: `mvn clean compile`
-
-### Frontend no conecta con Backend
-- Verificar `NEXT_PUBLIC_API_URL` en `.env.local`
-- Backend debe estar ejecutándose
-- Ver logs: `tail -f /tmp/homeIA-frontend.log`
-
-### Tokens expirados
-- Frontend maneja refresh automático
-- Si falla, dirigue a login
-- Credenciales demo siempre disponibles
-
-## 🚀 Deployment
-
-### Docker (próximo)
-Se planea crear Dockerfile para backend y frontend.
-
-### Kubernetes (próximo)
-Se planea crear manifiestos k8s.
-
-## 📚 Documentación Adicional
-
-- [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) - Resumen técnico
-- [REFRESH_TOKENS_GUIDE.md](./REFRESH_TOKENS_GUIDE.md) - Guía de tokens
-- [HELP.md](./HELP.md) - Ayuda adicional
-
-## 👨‍💻 Desarrollo
-
-### Clonar proyecto
-```bash
-git clone https://github.com/estebanMns/HomeIA.git
-cd HomeIA
-```
-
-### Instalar dependencias
-Backend: se descarga automáticamente con Maven
-```bash
-cd homeIafrontend
-npm install
-```
-
-### Ejecutar en desarrollo
-```bash
-./start-dev.sh
-```
-
-## 📄 Licencia
-
-Proyecto educativo - HomeIA 2026
-
-## 📞 Soporte
-
-Para problemas o sugerencias, crear issue en GitHub.
-
----
-
-**Última actualización:** 2026-10-08  
-**Versión:** 0.0.1-SNAPSHOT  
-**Estado:** ✅ Producción-Ready
+- **Contraseñas:** de 12 a 64 caracteres, con mayúscula, minúscula, número y símbolo. Se rechazan las secuencias, las repeticiones, las contraseñas comunes y las que contienen el nombre o el correo (`service/PasswordPolicy.java`).
+- **Límites por IP:** registro, login y recuperación de contraseña. Además, el login se bloquea tras 5 fallos seguidos en la misma cuenta.
+- **Permisos:** las acciones de administrador exigen el rol `ADMIN`, y cada usuario solo ve los datos de su casa.
