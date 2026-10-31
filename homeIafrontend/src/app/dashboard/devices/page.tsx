@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useDeferredValue, useMemo, useState } from 'react';
 import { Lightbulb, Pencil, Plug, Plus, Radio, Search, ShieldCheck, Trash2, Wifi, WifiOff } from 'lucide-react';
 import { api, ApiError } from '@/services/api';
 import { useAsync } from '@/hooks/useAsync';
@@ -45,9 +45,12 @@ export default function DevicesPage() {
 
   const roomName = useMemo(() => new Map((data?.rooms ?? []).map((r) => [r.id, r.name])), [data]);
 
+  // La búsqueda se filtra con un valor diferido: React atiende primero cada tecla (urgente) y
+  // recalcula la tabla después, sin bloquear la escritura.
+  const deferredQuery = useDeferredValue(query);
   const filtered = (data?.devices ?? []).filter(
     (d) =>
-      d.name.toLowerCase().includes(query.toLowerCase()) &&
+      d.name.toLowerCase().includes(deferredQuery.toLowerCase()) &&
       (roomFilter === '' || d.roomId === roomFilter),
   );
 
