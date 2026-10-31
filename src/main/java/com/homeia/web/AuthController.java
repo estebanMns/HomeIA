@@ -2,9 +2,9 @@ package com.homeia.web;
 
 import com.homeia.persistence.UserEntity;
 import com.homeia.service.ApiException;
+import com.homeia.service.AuthRateLimits;
 import com.homeia.service.AuthService;
 import com.homeia.service.PasswordPolicy;
-import com.homeia.service.RegistrationRateLimiter;
 import com.homeia.service.PasswordResetService;
 import com.homeia.service.SetupService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,14 +29,14 @@ public class AuthController {
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
     private final SetupService setupService;
-    private final RegistrationRateLimiter registrationLimiter;
+    private final AuthRateLimits limits;
 
     public AuthController(AuthService authService, PasswordResetService passwordResetService, SetupService setupService,
-                          RegistrationRateLimiter registrationLimiter) {
+                          AuthRateLimits limits) {
         this.authService = authService;
         this.passwordResetService = passwordResetService;
         this.setupService = setupService;
-        this.registrationLimiter = registrationLimiter;
+        this.limits = limits;
     }
 
     public record PasswordRuleDto(String id, String description) {
@@ -62,7 +62,11 @@ public class AuthController {
 
     /** Siempre responde igual, exista o no el correo, para no revelar qué cuentas hay. */
     @PostMapping("/password/forgot")
-    public Map<String, Object> forgot(@RequestBody ForgotBody body) {
+    public Map<String, Object> forgot(@RequestBody ForgotBody body, HttpServletRequest request) {
+        if (!limits.passwordReset().tryAcquire(request.getRemoteAddr())) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Se pidieron demasiados enlaces de recuperación desde esta red. Espera una hora e inténtalo de nuevo");
+        }
         passwordResetService.requestReset(body.email());
         return Map.of("message", "Si el correo está registrado, recibirás un enlace para restablecer la contraseña");
     }
@@ -73,9 +77,17 @@ public class AuthController {
         return Map.of("success", true);
     }
 
+    /** Limitado por IP: un login correcto reinicia el conteo, así solo frenan los fallos seguidos. */
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody LoginRequest request) {
-        return session(authService.login(request.email(), request.password()));
+    public Map<String, Object> login(@RequestBody LoginRequest request, HttpServletRequest http) {
+        String ip = http.getRemoteAddr();
+        if (!limits.login().tryAcquire(ip)) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Demasiados intentos de ingreso fallidos desde esta red. Espera 15 minutos e inténtalo de nuevo");
+        }
+        Map<String, Object> result = session(authService.login(request.email(), request.password()));
+        limits.login().reset(ip);
+        return result;
     }
 
     /** Reglas de contraseña vigentes, para mostrarlas en los formularios. */
@@ -93,7 +105,7 @@ public class AuthController {
      */
     @PostMapping("/register")
     public Map<String, Object> register(@Valid @RequestBody RegisterBody body, HttpServletRequest request) {
-        if (!registrationLimiter.tryAcquire(request.getRemoteAddr())) {
+        if (!limits.registration().tryAcquire(request.getRemoteAddr())) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
                     "Se hicieron demasiados intentos de registro desde esta red. Espera una hora e inténtalo de nuevo");
         }
