@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { Bot, Play } from 'lucide-react';
 import { api, ApiError } from '@/services/api';
 import { useAsync } from '@/hooks/useAsync';
@@ -17,6 +17,20 @@ interface Data {
   devices: Device[];
 }
 
+type SettingsForm = Omit<AutomationSettings, 'updatedAt'>;
+
+function toForm(s: AutomationSettings): SettingsForm {
+  return {
+    enabled: s.enabled,
+    vacancyMinutes: s.vacancyMinutes,
+    returnSensitivityPercent: s.returnSensitivityPercent,
+    consumptionAlertWatts: s.consumptionAlertWatts,
+    leakMinutes: s.leakMinutes,
+    consumptionSustainedMinutes: s.consumptionSustainedMinutes,
+    alertCooldownMinutes: s.alertCooldownMinutes,
+  };
+}
+
 export default function AutomationPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
@@ -31,17 +45,18 @@ export default function AutomationPage() {
     return { settings, status, actions: actions.content, rooms, devices };
   }, [], 30000);
 
-  const [form, setForm] = useState<Omit<AutomationSettings, 'updatedAt'> | null>(null);
+  const [form, setForm] = useState<SettingsForm | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [probabilities, setProbabilities] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    if (data) {
-      const { updatedAt: _ignored, ...rest } = data.settings;
-      setForm(rest);
-    }
-  }, [data]);
+  // El formulario se recarga solo cuando la configuración cambia en el backend, no en cada refresco
+  // de 30 s: así no se pierde lo que se está editando.
+  const [formVersion, setFormVersion] = useState<string | null>(null);
+  if (data && data.settings.updatedAt !== formVersion) {
+    setFormVersion(data.settings.updatedAt);
+    setForm(toForm(data.settings));
+  }
 
   const run = async (action: () => Promise<unknown>, ok: string) => {
     setBusy(true);

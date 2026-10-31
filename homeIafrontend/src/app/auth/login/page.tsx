@@ -1,27 +1,29 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronRight, ShieldCheck, Sparkles, TrendingDown } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ApiError } from '@/services/api';
 import { Badge, Logo } from '@/components/ui/Primitives';
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="login-page" />}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const { login, isAuthenticated, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [info, setInfo] = useState('');
-
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('registered') === '1') {
-      setInfo('Cuenta creada. Ingresa con tu correo y contraseña.');
-    }
-  }, []);
+  const info = useSearchParams().get('registered') === '1' ? 'Cuenta creada. Ingresa con tu correo y contraseña.' : '';
 
   // Si ya hay sesión guardada, no tiene sentido mostrar el login.
   useEffect(() => {

@@ -24,7 +24,7 @@ const statusTone: Record<WhatsAppMessage['status'], 'green' | 'amber' | 'red'> =
 export default function WhatsAppPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
-  const { data, error, loading, reload } = useAsync<Data>(async () => {
+  const { data, error, reload } = useAsync<Data>(async () => {
     const [status, recipients, messages] = await Promise.all([
       api.whatsappStatus(),
       api.whatsappRecipients(),

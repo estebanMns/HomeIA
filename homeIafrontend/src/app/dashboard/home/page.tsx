@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { api, ApiError } from '@/services/api';
 import { useAsync } from '@/hooks/useAsync';
@@ -29,16 +29,17 @@ export default function HomePage() {
   const [homeForm, setHomeForm] = useState({ name: '', currency: '', electricityPricePerKwh: '', timezone: '' });
   const [newUser, setNewUser] = useState({ fullName: '', email: '', password: '', role: 'MEMBER' as UserRole });
 
-  useEffect(() => {
-    if (data) {
-      setHomeForm({
-        name: data.home.name,
-        currency: data.home.currency,
-        electricityPricePerKwh: String(data.home.electricityPricePerKwh),
-        timezone: data.home.timezone,
-      });
-    }
-  }, [data]);
+  // El formulario se recarga cuando los datos de la casa cambian en el backend.
+  const [homeVersion, setHomeVersion] = useState<string | null>(null);
+  if (data && data.home.updatedAt !== homeVersion) {
+    setHomeVersion(data.home.updatedAt);
+    setHomeForm({
+      name: data.home.name,
+      currency: data.home.currency,
+      electricityPricePerKwh: String(data.home.electricityPricePerKwh),
+      timezone: data.home.timezone,
+    });
+  }
 
   const run = async (action: () => Promise<unknown>, ok: string) => {
     setBusy(true);
