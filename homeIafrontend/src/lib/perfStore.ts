@@ -46,9 +46,12 @@ export interface ApiEndpointStat {
   p95Ms: number;
 }
 
+/** Dónde corrió un cálculo: Web Worker, hilo principal de una vez, o hilo principal por bloques. */
+export type ComputeThread = 'worker' | 'main' | 'main-chunked';
+
 export interface Computation {
   label: string;
-  thread: 'worker' | 'main';
+  thread: ComputeThread;
   ms: number;
   at: number;
 }
