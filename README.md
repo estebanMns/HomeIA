@@ -244,15 +244,6 @@ npm install
 ```bash
 ./start-dev.sh
 ```
-
-## 📄 Licencia
-
-Proyecto educativo - HomeIA 2026
-
-## 📞 Soporte
-
-Para problemas o sugerencias, crear issue en GitHub.
-
 ---
 
 **Última actualización:** 2026-10-08  
