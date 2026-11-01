@@ -2,11 +2,19 @@
 
 import { useState } from 'react';
 import { Card, SectionTitle, Button } from '@/components/ui/Primitives';
-import BillingPanel from '@/components/billing/BillingPanel';
+import dynamic from 'next/dynamic';
 import { api } from '@/services/api';
 import { useAsync } from '@/hooks/useAsync';
 import { useEnergyStats } from '@/hooks/useEnergyStats';
 import type { EnergyBucket, EnergySummary, RoomEnergy } from '@/types';
+
+/**
+ * Code splitting: el panel de facturación está al final de la página y es pesado (formularios,
+ * listas). Se descarga en un archivo aparte, después de lo visible, con un esqueleto mientras llega.
+ */
+const BillingPanel = dynamic(() => import('@/components/billing/BillingPanel'), {
+  loading: () => <div className="skeleton" style={{ height: 320, marginTop: 24 }} />,
+});
 
 const RANGES = {
   '24h': { hours: 24, bucket: 'hour' as const, label: 'Últimas 24 h' },

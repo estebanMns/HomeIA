@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export function middleware(request: NextRequest) {
+/**
+ * Protección en el servidor: sin cookie de sesión, /dashboard redirige al login antes de renderizar.
+ * Next.js 16 lo llama "proxy" (antes middleware) y debe estar junto a app/, es decir, en src/.
+ */
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Rutas públicas

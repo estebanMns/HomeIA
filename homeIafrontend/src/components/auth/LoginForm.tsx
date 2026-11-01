@@ -1,0 +1,96 @@
+'use client';
+
+import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ChevronRight, ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { ApiError } from '@/services/api';
+import { Logo } from '@/components/ui/Primitives';
+
+/** Formulario de ingreso: es la parte interactiva (Client Component) de la página de login. */
+export default function LoginForm() {
+  const router = useRouter();
+  const { login, isAuthenticated, isLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const info = useSearchParams().get('registered') === '1' ? 'Cuenta creada. Ingresa con tu correo y contraseña.' : '';
+
+  // Si ya hay sesión guardada, no tiene sentido mostrar el login.
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace('/dashboard');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      await login(email, password);
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo conectar con el servidor de HomeIA');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="login-form-wrap">
+      <form className="login-form" onSubmit={handleSubmit}>
+        <div className="mobile-logo">
+          <Logo />
+        </div>
+        <div className="detail-title">Bienvenido de nuevo</div>
+        <p>Ingresa para ver cómo está ahorrando tu hogar.</p>
+
+        {info && (
+          <div className="card" style={{ margin: '14px 0', color: 'var(--green)', borderColor: 'var(--green)' }}>
+            {info}
+          </div>
+        )}
+
+        {error && (
+          <div className="card" style={{ margin: '14px 0', color: 'var(--red)', borderColor: 'var(--red)' }}>
+            {error}
+          </div>
+        )}
+
+        <label className="field">
+          <span>Correo electrónico</span>
+          <div>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
+          </div>
+        </label>
+        <label className="field">
+          <span>Contraseña</span>
+          <div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+            />
+          </div>
+        </label>
+
+        <button type="submit" className="btn btn-primary btn-md login-button" disabled={submitting}>
+          {submitting ? 'Ingresando…' : 'Ingresar a HomeIA'} {!submitting && <ChevronRight size={17} />}
+        </button>
+
+        <div className="login-help">
+          <ShieldCheck size={15} /> Conexión segura y protegida · <Link href="/auth/forgot">¿Olvidaste tu contraseña?</Link>
+        </div>
+        <div className="login-divider">¿Aún no tienes cuenta?</div>
+        <Link href="/auth/register" className="btn btn-outline btn-md login-secondary">
+          Crear una cuenta nueva
+        </Link>
+      </form>
+    </div>
+  );
+}

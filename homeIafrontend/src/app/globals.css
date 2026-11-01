@@ -284,3 +284,17 @@ main { min-width: 0; flex: 1; margin-left: 256px; }
   .wifi-row-form { grid-column: auto; }
 }
 .device-provider { display: block; font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* Esqueletos de carga (loading.tsx y carga diferida) */
+.skeleton { background: linear-gradient(90deg, var(--line) 25%, var(--surface) 50%, var(--line) 75%); background-size: 200% 100%; border-radius: 10px; animation: skeleton-shimmer 1.2s ease-in-out infinite; }
+.skeleton-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+@keyframes skeleton-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (max-width: 760px) { .skeleton-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Demostración del event loop: la barra se mueve con JavaScript; si el hilo se bloquea, se congela */
+.perf-ticker { position: relative; height: 10px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.perf-ticker i { position: absolute; top: 0; left: 0; width: 18%; height: 100%; border-radius: 6px; background: var(--green); }
+.perf-rating-good { color: var(--green); }
+.perf-rating-needs-improvement { color: var(--amber); }
+.perf-rating-poor { color: var(--red); }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
