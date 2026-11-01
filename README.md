@@ -48,6 +48,10 @@ homeIafrontend/src/                       app/ (páginas), components/, services
 cd homeIafrontend && npx tsc --noEmit && npm run lint && npm run build
 ```
 
+## Rendimiento
+
+Web Workers, patrones de rendering, event loop y métricas (Web Vitals, latencia de la API, long tasks), con resultados medidos: [docs/RENDIMIENTO.md](docs/RENDIMIENTO.md). Se ven en vivo en **Administración → Rendimiento**.
+
 ## Desplegar
 
 Frontend en Vercel y backend en Railway: [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
