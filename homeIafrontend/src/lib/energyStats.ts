@@ -128,14 +128,46 @@ export async function computeEnergyStatsInChunks(buckets: readonly EnergyBucket[
   return summarize(buckets, hours);
 }
 
+/**
+ * Serie en columnas: instantes (ms desde 1970) y potencias. Con Float64Array se puede *transferir*
+ * al worker (postMessage con lista de transferibles): se mueve la memoria en vez de copiarla.
+ */
+export interface EnergySeries {
+  starts: Float64Array;
+  watts: Float64Array;
+}
+
+/** Convierte la serie en columnas a buckets. Se hace donde se calcula (worker o hilo principal). */
+export function bucketsFromSeries(series: EnergySeries): EnergyBucket[] {
+  const out = new Array<EnergyBucket>(series.starts.length);
+  for (let i = 0; i < series.starts.length; i++) {
+    const averageWatts = series.watts[i];
+    out[i] = { start: new Date(series.starts[i]).toISOString(), kwh: averageWatts / 1000, cost: 0, averageWatts };
+  }
+  return out;
+}
+
+/** Igual que bucketsFromSeries, pero cediendo el hilo entre bloques (para el hilo principal). */
+export async function bucketsFromSeriesInChunks(series: EnergySeries): Promise<EnergyBucket[]> {
+  const out = new Array<EnergyBucket>(series.starts.length);
+  await processInChunks(series.starts, (t, i) => {
+    const averageWatts = series.watts[i];
+    out[i] = { start: new Date(t).toISOString(), kwh: averageWatts / 1000, cost: 0, averageWatts };
+  }, 5000);
+  return out;
+}
+
 /** Serie sintética por hora para la demostración: patrón diario con ruido y algunos picos. */
-export function syntheticBuckets(count: number): EnergyBucket[] {
-  const start = Date.now() - count * 3600_000;
-  return Array.from({ length: count }, (_, i) => {
-    const hour = new Date(start + i * 3600_000).getHours();
+export function syntheticSeries(count: number): EnergySeries {
+  const starts = new Float64Array(count);
+  const watts = new Float64Array(count);
+  const first = Date.now() - count * 3600_000;
+  for (let i = 0; i < count; i++) {
+    starts[i] = first + i * 3600_000;
+    const hour = (Math.floor(starts[i] / 3600_000) - 5 + 240) % 24; // hora de Bogotá (UTC−5)
     const daily = 300 + 900 * Math.max(0, Math.sin(((hour - 6) / 24) * 2 * Math.PI));
     const spike = i % 997 === 0 ? 2500 : 0;
-    const averageWatts = Math.max(0, daily + spike + ((i * 7919) % 200) - 100);
-    return { start: new Date(start + i * 3600_000).toISOString(), kwh: averageWatts / 1000, cost: 0, averageWatts };
-  });
+    watts[i] = Math.max(0, daily + spike + ((i * 7919) % 200) - 100);
+  }
+  return { starts, watts };
 }

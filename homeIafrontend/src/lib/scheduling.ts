@@ -49,7 +49,7 @@ export function whenIdle(callback: () => void, timeoutMs = 2000): () => void {
  * Procesa una lista grande en bloques y cede el hilo entre bloques, para que ninguna tarea
  * pase de ~50 ms y la interfaz siga respondiendo.
  */
-export async function processInChunks<T>(items: readonly T[], fn: (item: T, index: number) => void, chunkSize = 2000) {
+export async function processInChunks<T>(items: ArrayLike<T>, fn: (item: T, index: number) => void, chunkSize = 2000) {
   for (let start = 0; start < items.length; start += chunkSize) {
     const end = Math.min(start + chunkSize, items.length);
     for (let i = start; i < end; i++) fn(items[i], i);

@@ -1,5 +1,12 @@
 import type { EnergyBucket } from '@/types';
-import { computeEnergyStats, computeEnergyStatsInChunks, type EnergyStats } from '@/lib/energyStats';
+import {
+  bucketsFromSeries,
+  bucketsFromSeriesInChunks,
+  computeEnergyStats,
+  computeEnergyStatsInChunks,
+  type EnergySeries,
+  type EnergyStats,
+} from '@/lib/energyStats';
 import { perfStore, type ComputeThread } from '@/lib/perfStore';
 
 export interface StatsResult {
@@ -40,12 +47,17 @@ function getWorker(): Worker {
   return created;
 }
 
-function inWorker(buckets: EnergyBucket[], timeZone?: string): Promise<{ stats: EnergyStats; ms: number }> {
+function inWorker(data: EnergyBucket[] | EnergySeries, timeZone?: string): Promise<{ stats: EnergyStats; ms: number }> {
   return new Promise((resolve, reject) => {
     const id = ++nextId;
     pending.set(id, { resolve, reject });
-    // postMessage copia los datos (structured clone): el worker no comparte memoria con la página.
-    getWorker().postMessage({ id, buckets, timeZone });
+    if (Array.isArray(data)) {
+      // Los objetos se copian (structured clone): barato para series pequeñas como las de la app.
+      getWorker().postMessage({ id, buckets: data, timeZone });
+    } else {
+      // Los Float64Array se transfieren: la memoria pasa al worker sin copiarse y aquí queda vacía.
+      getWorker().postMessage({ id, series: data, timeZone }, [data.starts.buffer, data.watts.buffer]);
+    }
   });
 }
 
@@ -56,22 +68,27 @@ function inWorker(buckets: EnergyBucket[], timeZone?: string): Promise<{ stats: 
  * - 'main-chunked': en el hilo principal por bloques, cediendo el hilo entre bloques.
  */
 export async function computeStats(
-  buckets: EnergyBucket[],
+  data: EnergyBucket[] | EnergySeries,
   timeZone: string | undefined,
   mode: ComputeThread,
   label: string,
 ): Promise<StatsResult> {
   const thread: ComputeThread = mode === 'worker' && !workersSupported() ? 'main-chunked' : mode;
+  const points = Array.isArray(data) ? data.length : data.starts.length;
   let result: { stats: EnergyStats; ms: number };
   if (thread === 'worker') {
-    result = await inWorker(buckets, timeZone);
+    result = await inWorker(data, timeZone);
   } else {
     const start = performance.now();
-    const stats = thread === 'main'
-      ? computeEnergyStats(buckets, timeZone)
-      : await computeEnergyStatsInChunks(buckets, timeZone);
+    let stats: EnergyStats;
+    if (thread === 'main') {
+      stats = computeEnergyStats(Array.isArray(data) ? data : bucketsFromSeries(data), timeZone);
+    } else {
+      const buckets = Array.isArray(data) ? data : await bucketsFromSeriesInChunks(data);
+      stats = await computeEnergyStatsInChunks(buckets, timeZone);
+    }
     result = { stats, ms: performance.now() - start };
   }
-  perfStore.recordComputation(`${label} (${buckets.length.toLocaleString('es-CO')} puntos)`, thread, Math.round(result.ms));
+  perfStore.recordComputation(`${label} (${points.toLocaleString('es-CO')} puntos)`, thread, Math.round(result.ms));
   return { ...result, thread };
 }

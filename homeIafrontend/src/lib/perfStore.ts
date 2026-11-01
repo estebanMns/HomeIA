@@ -77,6 +77,8 @@ let pending: MetricSample[] = [];
 
 const listeners = new Set<() => void>();
 let snapshot: PerfSnapshot = buildSnapshot();
+/** Lo que se renderiza en el servidor y en la hidratación: siempre vacío, para que coincidan. */
+const SERVER_SNAPSHOT: PerfSnapshot = snapshot;
 
 function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) return 0;
@@ -115,6 +117,7 @@ export const perfStore = {
     return () => listeners.delete(listener);
   },
   getSnapshot: () => snapshot,
+  getServerSnapshot: () => SERVER_SNAPSHOT,
 
   recordVital(name: VitalName, value: number, page: string) {
     vitals[name] = { value, rating: rate(name, value), page };

@@ -11,6 +11,7 @@ import {
   Building2,
   ChevronDown,
   DoorOpen,
+  Gauge,
   Home,
   HousePlug,
   History,
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/services/api';
+import { useAsync } from '@/hooks/useAsync';
 import type { Home as HomeData } from '@/types';
 import { Button, Logo } from '@/components/ui/Primitives';
 
@@ -43,6 +45,7 @@ const navAdmin = [
   { href: '/dashboard/history', label: 'Historial', icon: History },
   { href: '/dashboard/home', label: 'Usuarios y casa', icon: Users },
   { href: '/dashboard/system', label: 'Estado del sistema', icon: Activity },
+  { href: '/dashboard/performance', label: 'Rendimiento', icon: Gauge },
 ];
 
 const titleMap: Record<string, string> = {
@@ -57,6 +60,7 @@ const titleMap: Record<string, string> = {
   '/dashboard/history': 'Historial y auditoría',
   '/dashboard/home': 'Usuarios y casa',
   '/dashboard/system': 'Estado del sistema',
+  '/dashboard/performance': 'Rendimiento',
 };
 
 export default function AppShell({ children }: { children: ReactNode }) {
@@ -65,20 +69,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const [dark, setDark] = useState(false);
   const [home, setHome] = useState<HomeData | null>(null);
-  const [online, setOnline] = useState<boolean | null>(null);
 
   useEffect(() => {
     api.home().then(setHome).catch(() => setHome(null));
   }, []);
 
-  // El indicador de la barra superior refleja si el backend responde de verdad.
-  useEffect(() => {
-    const check = () =>
-      api.systemHealth().then(() => setOnline(true)).catch(() => setOnline(false));
-    check();
-    const id = setInterval(check, 30000);
-    return () => clearInterval(id);
-  }, []);
+  // El indicador de la barra superior refleja si el backend responde de verdad. Usa useAsync para
+  // que el chequeo se encadene y se pause con la pestaña oculta, como el resto de la app.
+  const health = useAsync(() => api.systemHealth(), [], 30000);
+  const online = health.loading ? null : !health.error;
 
   const title = titleMap[pathname] ?? 'HomeIA';
   const initials = user?.fullName
