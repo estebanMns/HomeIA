@@ -35,9 +35,14 @@ import { perfStore, type MetricSample } from '@/lib/perfStore';
 /**
  * Dirección base de la API. Todas las rutas del backend empiezan por /api (y solo ahí aplica CORS),
  * así que se agrega si falta: "http://localhost:8080" y "http://localhost:8080/api/" quedan iguales.
+ * Sin protocolo ("backend.up.railway.app") el navegador la tomaría como una ruta del propio sitio,
+ * así que se asume https:// (o http:// para localhost).
  */
 export function normalizeApiUrl(raw: string): string {
-  const trimmed = raw.trim().replace(/\/+$/, '');
+  let trimmed = raw.trim().replace(/^['"]|['"]$/g, '').replace(/\/+$/, '');
+  if (!/^https?:\/\//i.test(trimmed)) {
+    trimmed = `${/^(localhost|127\.0\.0\.1)([:/]|$)/.test(trimmed) ? 'http' : 'https'}://${trimmed}`;
+  }
   return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
 }
 
