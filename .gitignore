@@ -62,3 +62,10 @@ WhatsApp Image*.jpeg
 WhatsApp Image*.jpg
 WhatsApp Image*.png
 *.recibo.*
+
+# Herramientas de diseño locales (Impeccable / Copilot): no se usan en producción
+.impeccable/
+.github/agents/
+.github/skills/
+.github/hooks/
+.github/modernize/

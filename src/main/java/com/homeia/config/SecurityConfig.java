@@ -47,7 +47,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource(HomeIaProperties properties) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.stream(properties.cors().allowedOrigins().split(","))
+        // Patrones: además de orígenes exactos, admite comodines como https://home-ia-*.vercel.app,
+        // porque Vercel publica cada despliegue en una URL distinta.
+        configuration.setAllowedOriginPatterns(Arrays.stream(properties.cors().allowedOrigins().split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
                 .toList());

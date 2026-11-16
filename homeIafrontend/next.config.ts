@@ -20,6 +20,23 @@ function devOrigins(): string[] {
   return [...new Set([...ownIps, ...extra])];
 }
 
+/**
+ * NEXT_PUBLIC_API_URL queda fija dentro del JavaScript al compilar. Si un build de Vercel la toma
+ * apuntando a localhost, la app publicada intenta hablar con el computador de cada visitante y nada
+ * funciona: mejor que el despliegue falle con un mensaje claro.
+ */
+function assertPublicApiUrl() {
+  const url = process.env.NEXT_PUBLIC_API_URL ?? "";
+  if (process.env.VERCEL && /\/\/(localhost|127\.0\.0\.1)([:/]|$)/.test(url)) {
+    throw new Error(
+      `NEXT_PUBLIC_API_URL apunta a ${url} en un build de Vercel. Configúrala en Vercel → Settings → ` +
+        "Environment Variables con la dirección pública del backend (p. ej. https://<backend>.up.railway.app/api) " +
+        "y vuelve a desplegar.",
+    );
+  }
+}
+assertPublicApiUrl();
+
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
