@@ -1,0 +1,44 @@
+# Stack local HomeIA Edge. Ejecutar en el equipo que comparte LAN con los dispositivos.
+# Configura ZIGBEE_SERIAL_DEVICE con el puerto real del coordinador USB.
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0.20
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    environment:
+      MQTT_USERNAME: ${MQTT_USERNAME:?Define MQTT_USERNAME}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?Define MQTT_PASSWORD}
+    command: >
+      sh -c 'mosquitto_passwd -b -c /mosquitto/data/passwd "$$MQTT_USERNAME" "$$MQTT_PASSWORD"
+      && chown mosquitto:mosquitto /mosquitto/data/passwd && chmod 0700 /mosquitto/data/passwd
+      && exec mosquitto -c /mosquitto/config/mosquitto.conf'
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt:latest
+    restart: unless-stopped
+    depends_on: [mosquitto]
+    volumes:
+      - ./data/zigbee2mqtt:/app/data
+      - /run/udev:/run/udev:ro
+    devices:
+      - ${ZIGBEE_SERIAL_DEVICE:-/dev/ttyUSB0}:/dev/ttyACM0
+    environment:
+      TZ: ${TZ:-America/Bogota}
+    ports:
+      - "8081:8080"
+  homeia-edge:
+    build: ./edge
+    restart: unless-stopped
+    network_mode: host
+    depends_on: [mosquitto, zigbee2mqtt]
+    environment:
+      MQTT_HOST: 127.0.0.1
+      MQTT_PORT: 1883
+      MQTT_USERNAME: ${MQTT_USERNAME}
+      MQTT_PASSWORD: ${MQTT_PASSWORD}
+      MQTT_CLIENT_ID: homeia-edge
+volumes:
+  mosquitto-data:

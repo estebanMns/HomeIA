@@ -37,7 +37,8 @@ export interface Room {
 }
 
 export type DeviceType = 'LIGHT' | 'SMART_OUTLET' | 'PRESENCE_SENSOR';
-export type DeviceProvider = 'MQTT' | 'TUYA';
+export type DeviceProvider = 'MQTT' | 'TUYA' | 'ZIGBEE' | 'SHELLY' | 'TASMOTA' | 'ESPHOME';
+export type DeviceProtocol = 'WIFI' | 'ZIGBEE' | 'MQTT' | 'CLOUD';
 export type ConnectionStatus = 'ONLINE' | 'OFFLINE';
 export type PowerState = 'ON' | 'OFF';
 export type DeviceCommand = 'ON' | 'OFF' | 'TOGGLE' | 'BRIGHTNESS' | 'STATUS';
@@ -60,6 +61,11 @@ export interface Device {
   provider: DeviceProvider;
   /** Id del dispositivo en Tuya. */
   externalId?: string | null;
+  protocol?: DeviceProtocol;
+  manufacturer?: string | null;
+  model?: string | null;
+  networkAddress?: string | null;
+  capabilitiesJson?: string;
   /** Umbral propio de consumo excesivo; sin valor se usa el de la casa. */
   consumptionAlertWatts?: number | null;
 }
@@ -289,3 +295,5 @@ export interface PerformanceMetricSummary {
   good: number;
   poor: number;
 }
+
+export interface DiscoveryCandidate { id: string; name: string; provider: DeviceProvider; protocol: DeviceProtocol; address: string; manufacturer?: string; model?: string; service?: string; capabilities: string[]; discoveredAt: string; }

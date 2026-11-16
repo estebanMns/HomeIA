@@ -69,3 +69,11 @@ WhatsApp Image*.png
 .github/skills/
 .github/hooks/
 .github/modernize/
+
+# Python (HomeIA Edge)
+__pycache__/
+*.py[cod]
+.venv/
+
+# Datos locales de Zigbee2MQTT / Mosquitto
+data/

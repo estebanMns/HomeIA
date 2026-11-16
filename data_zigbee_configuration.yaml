@@ -1,0 +1,19 @@
+# Copiar a data/zigbee2mqtt/configuration.yaml antes de iniciar Zigbee2MQTT.
+version: 4
+homeassistant:
+  enabled: false
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://mosquitto:1883
+  user: REPLACE_WITH_MQTT_USERNAME
+  password: REPLACE_WITH_MQTT_PASSWORD
+serial:
+  port: /dev/ttyACM0
+  adapter: ember # Cambiar a zstack si el coordinador usa TI Z-Stack.
+frontend:
+  enabled: true
+  port: 8080
+permit_join: false
+advanced:
+  log_level: info
+  channel: 15

@@ -31,12 +31,13 @@ public class DeviceController {
     public record DeviceDto(UUID id, String name, UUID roomId, DeviceType type, ConnectionStatus connectionStatus,
                             PowerState powerState, Integer brightness, double consumptionWatts, boolean critical,
                             Boolean presence, Instant lastPresenceAt, Instant lastStatusChangeAt, Instant lastSeenAt,
-                            DeviceProvider provider, String externalId, Double consumptionAlertWatts) {
+                            DeviceProvider provider, String externalId, Double consumptionAlertWatts,
+                            com.homeia.domain.DeviceProtocol protocol, String manufacturer, String model, String networkAddress, String capabilitiesJson) {
         static DeviceDto from(DeviceEntity d) {
             return new DeviceDto(d.getId(), d.getName(), d.getRoomId(), d.getType(), d.getConnectionStatus(),
                     d.getPowerState(), d.getBrightness(), d.getConsumptionWatts(), d.isCritical(), d.getPresence(),
                     d.getLastPresenceAt(), d.getLastStatusChangeAt(), d.getLastSeenAt(), d.getProvider(), d.getExternalId(),
-                    d.getConsumptionAlertWatts());
+                    d.getConsumptionAlertWatts(), d.getProtocol(), d.getManufacturer(), d.getModel(), d.getNetworkAddress(), d.getCapabilitiesJson());
         }
     }
 

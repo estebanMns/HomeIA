@@ -6,6 +6,8 @@ import com.homeia.domain.DeviceProvider;
 import com.homeia.domain.DeviceType;
 import com.homeia.domain.PowerState;
 import com.homeia.integration.DeviceReportEvent;
+import com.homeia.integration.ZigbeeReportEvent;
+import com.homeia.domain.DeviceProtocol;
 import com.homeia.integration.Json;
 import com.homeia.integration.tuya.TuyaApiException;
 import com.homeia.integration.tuya.TuyaCloudDevice;
@@ -189,6 +191,55 @@ public class DeviceService {
                 () -> log.debug("Reporte MQTT de un dispositivo desconocido: {}", event.deviceId()));
     }
 
+    /** Registra un dispositivo ya descubierto y autorizado por el administrador. */
+    @Transactional
+    public DeviceEntity registerExternal(AuthPrincipal principal, String name, DeviceType type, UUID roomId,
+                                         boolean critical, DeviceProvider provider, String externalId,
+                                         DeviceProtocol protocol, String manufacturer, String model, String capabilitiesJson, String networkAddress) {
+        if (name == null || name.isBlank() || externalId == null || externalId.isBlank())
+            throw ApiException.badRequest("Nombre e identificador externo son obligatorios");
+        if (provider == null || protocol == null) throw ApiException.badRequest("Proveedor y protocolo son obligatorios");
+        if (deviceRepository.findByHomeIdAndProviderAndExternalId(principal.homeId(), provider, externalId).isPresent())
+            throw ApiException.conflict("El dispositivo ya está registrado");
+        if (roomId != null) roomService.get(principal.homeId(), roomId);
+        DeviceEntity device = new DeviceEntity();
+        device.setHomeId(principal.homeId()); device.setRoomId(roomId); device.setName(name.trim());
+        device.setType(type); device.setCritical(critical); device.setProvider(provider); device.setExternalId(externalId);
+        device.setProtocol(protocol); device.setManufacturer(manufacturer); device.setModel(model);
+        device.setCapabilitiesJson(capabilitiesJson == null ? "[]" : capabilitiesJson);
+        device.setNetworkAddress(networkAddress);
+        deviceRepository.save(device);
+        auditService.record(principal, "DEVICE_EXTERNAL_IMPORTED", "DEVICE", device.getId().toString(), provider + ":" + externalId);
+        return device;
+    }
+
+    /** Estado reportado por Zigbee2MQTT: se normaliza al mismo flujo de reportes de MQTT. */
+    @EventListener
+    @Transactional
+    public void onZigbeeReport(ZigbeeReportEvent event) {
+        String normalized = normalizeZigbeePayload(event.payload());
+        deviceRepository.findAllByProviderAndExternalId(DeviceProvider.ZIGBEE, event.friendlyName())
+                .forEach(device -> applyReport(device, normalized));
+    }
+
+    private String normalizeZigbeePayload(String payload) {
+        try {
+            JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper().readTree(payload);
+            Map<String,Object> report = new java.util.LinkedHashMap<>();
+            JsonNode state = node.get("state");
+            if (state == null) state = node.get("state_l1");
+            if (state != null && state.isTextual()) report.put("powerState", state.asText().equalsIgnoreCase("ON") ? "ON" : "OFF");
+            JsonNode brightness = node.get("brightness");
+            if (brightness != null && brightness.isNumber()) report.put("brightness", Math.round(brightness.asInt() * 100f / 254f));
+            JsonNode power = node.get("power");
+            if (power != null && power.isNumber()) report.put("consumptionWatts", power.asDouble());
+            return Json.write(report);
+        } catch (Exception ex) {
+            log.debug("Reporte Zigbee no válido: {}", ex.getMessage());
+            return "{}";
+        }
+    }
+
     /** Si el driver puede leer el estado (Tuya), lo aplica de inmediato. */
     private void refreshState(DeviceEntity device, DeviceDriver driver) {
         try {
@@ -241,6 +292,8 @@ public class DeviceService {
         device.setType(type);
         device.setCritical(critical);
         device.setProvider(DeviceProvider.TUYA);
+        device.setProtocol(DeviceProtocol.CLOUD);
+        device.setManufacturer("Tuya");
         device.setExternalId(id);
         deviceRepository.save(device);
         auditService.record(principal, "DEVICE_TUYA_IMPORTED", "DEVICE", device.getId().toString(),

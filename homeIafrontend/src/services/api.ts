@@ -286,6 +286,12 @@ export const api = {
   importTuyaDevice: (body: { externalId: string; name?: string; type: DeviceType; roomId?: string; critical: boolean }) =>
     request<Device>('POST', '/wifi/tuya/import', body),
   syncTuya: () => request<{ updated: number }>('POST', '/wifi/tuya/sync'),
+  discoveryScan: () => request<{ accepted: boolean; message: string }>('POST', '/discovery/scan'),
+  discoveryCandidates: () => request<import('@/types').DiscoveryCandidate[]>('GET', '/discovery/candidates'),
+  zigbeePermitJoin: (seconds = 60) => request<{ accepted: boolean; seconds: number }>('POST', `/discovery/zigbee/permit-join?seconds=${seconds}`),
+  zigbeeClosePermitJoin: () => request<{ accepted: boolean; seconds: number }>('POST', '/discovery/zigbee/permit-join/close'),
+  claimDiscoveryCandidate: (id: string, body: { type: DeviceType; roomId?: string; critical: boolean }) =>
+    request<Device>('POST', `/discovery/candidates/${id}/claim`, body),
 
   changeMyPassword: (currentPassword: string, newPassword: string) =>
     request<{ success: boolean }>('PUT', '/users/me/password', { currentPassword, newPassword }),

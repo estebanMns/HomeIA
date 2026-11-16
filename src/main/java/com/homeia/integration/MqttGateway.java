@@ -115,7 +115,10 @@ public class MqttGateway implements MqttCallbackExtended {
         String topic = stateTopicFilter();
         try {
             current.subscribe(topic, 1);
-            log.info("Suscrito a {}", topic);
+            // Zigbee2MQTT comparte el broker, pero usa su propio árbol de tópicos.
+            current.subscribe("zigbee2mqtt/#", 1);
+            current.subscribe("homeia/edge/discovery", 1);
+            log.info("Suscrito a {} y a los tópicos de Zigbee2MQTT/HomeIA Edge", topic);
         } catch (Exception e) {
             log.error("No se pudo suscribir a {}: {}", topic, e.getMessage());
         }
@@ -127,6 +130,11 @@ public class MqttGateway implements MqttCallbackExtended {
 
     /** Publica un comando JSON para un dispositivo. Lanza IllegalStateException si MQTT no está disponible. */
     public void publishCommand(UUID deviceId, String json) {
+        publish(properties.topicPrefix() + "/" + deviceId + "/command", json);
+    }
+
+    /** Publica en un tópico de integración (por ejemplo Zigbee2MQTT). El tópico se valida en el driver. */
+    public void publish(String topic, String json) {
         MqttClient current = client;
         if (current == null || !current.isConnected()) {
             throw new IllegalStateException("El broker MQTT no está conectado");
@@ -134,7 +142,7 @@ public class MqttGateway implements MqttCallbackExtended {
         try {
             MqttMessage message = new MqttMessage(json.getBytes(StandardCharsets.UTF_8));
             message.setQos(1);
-            current.publish(properties.topicPrefix() + "/" + deviceId + "/command", message);
+            current.publish(topic, message);
         } catch (Exception e) {
             throw new IllegalStateException("No se pudo publicar el comando MQTT: " + e.getMessage(), e);
         }
@@ -144,8 +152,18 @@ public class MqttGateway implements MqttCallbackExtended {
     public void messageArrived(String topic, MqttMessage message) {
         try {
             String[] parts = topic.split("/");
+            String payload = new String(message.getPayload(), StandardCharsets.UTF_8);
+            if (topic.startsWith("zigbee2mqtt/") && !topic.startsWith("zigbee2mqtt/bridge/")) {
+                String friendlyName = topic.substring("zigbee2mqtt/".length());
+                if (!friendlyName.contains("/")) events.publishEvent(new ZigbeeReportEvent(friendlyName, payload));
+                return;
+            }
+            if (topic.equals("homeia/edge/discovery")) {
+                events.publishEvent(new EdgeDiscoveryEvent(payload));
+                return;
+            }
             UUID deviceId = UUID.fromString(parts[parts.length - 2]);
-            events.publishEvent(new DeviceReportEvent(deviceId, new String(message.getPayload(), StandardCharsets.UTF_8)));
+            events.publishEvent(new DeviceReportEvent(deviceId, payload));
         } catch (Exception e) {
             log.warn("Mensaje MQTT ignorado en {}: {}", topic, e.getMessage());
         }
