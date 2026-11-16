@@ -30,4 +30,12 @@ class CorsConfigTest {
         assertThat(cors.checkOrigin("https://otra-app.vercel.app")).isNull();
         assertThat(cors.checkOrigin("http://localhost:3000")).isNull();
     }
+
+    @Test
+    void completaElProtocoloSiFalta() {
+        CorsConfiguration cors = corsFor("home-ia-esteban3345s-projects.vercel.app,localhost:3000");
+
+        assertThat(cors.checkOrigin("https://home-ia-esteban3345s-projects.vercel.app")).isNotNull();
+        assertThat(cors.checkOrigin("http://localhost:3000")).isNotNull();
+    }
 }

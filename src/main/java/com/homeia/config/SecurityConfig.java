@@ -52,6 +52,7 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(Arrays.stream(properties.cors().allowedOrigins().split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
+                .map(SecurityConfig::withScheme)
                 .toList());
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
@@ -59,6 +60,17 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", configuration);
         return source;
+    }
+
+    /**
+     * El navegador envía el origen con protocolo ("https://mi-app.vercel.app"); un dominio escrito sin él
+     * en CORS_ALLOWED_ORIGINS nunca coincidiría. Se asume https://, o http:// para localhost.
+     */
+    static String withScheme(String origin) {
+        if (origin.contains("://")) {
+            return origin;
+        }
+        return (origin.startsWith("localhost") || origin.startsWith("127.0.0.1") ? "http://" : "https://") + origin;
     }
 
     @Bean

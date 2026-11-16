@@ -15,7 +15,9 @@ WORKDIR /app
 RUN useradd --system --uid 10001 homeia
 COPY --from=build /app/target/*.jar app.jar
 USER homeia
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75"
+# Memoria acotada: con MaxRAMPercentage la JVM crecía hasta que Railway la mataba en pleno arranque
+# (reinicios en bucle, sin error en el log). Se puede cambiar con la variable JAVA_TOOL_OPTIONS.
+ENV JAVA_TOOL_OPTIONS="-Xmx300m -Xss512k -XX:MaxMetaspaceSize=170m -XX:ReservedCodeCacheSize=48m -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
 # Railway define PORT; el backend lo lee con server.port=${PORT:8080}
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
