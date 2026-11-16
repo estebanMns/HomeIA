@@ -37,7 +37,8 @@ export interface Room {
 }
 
 export type DeviceType = 'LIGHT' | 'SMART_OUTLET' | 'PRESENCE_SENSOR';
-export type DeviceProvider = 'MQTT' | 'TUYA';
+export type DeviceProvider = 'MQTT' | 'TUYA' | 'ZIGBEE' | 'SHELLY' | 'TASMOTA' | 'ESPHOME' | 'WLED';
+export type DeviceProtocol = 'WIFI' | 'ZIGBEE' | 'MQTT' | 'CLOUD';
 export type ConnectionStatus = 'ONLINE' | 'OFFLINE';
 export type PowerState = 'ON' | 'OFF';
 export type DeviceCommand = 'ON' | 'OFF' | 'TOGGLE' | 'BRIGHTNESS' | 'STATUS';
@@ -60,6 +61,18 @@ export interface Device {
   provider: DeviceProvider;
   /** Id del dispositivo en Tuya. */
   externalId?: string | null;
+  protocol?: DeviceProtocol;
+  manufacturer?: string | null;
+  model?: string | null;
+  networkAddress?: string | null;
+  capabilitiesJson?: string;
+  /** Capacidades efectivas (anunciadas o inferidas del tipo y proveedor) que valida el backend. */
+  effectiveCapabilities?: DeviceCapability[];
+  /** HomeIA Edge que controla el dispositivo en la LAN. */
+  edgeId?: string | null;
+  /** Última telemetría normalizada (JSON): temperatureC, humidityPercent, batteryPercent, contactOpen… */
+  telemetryJson?: string;
+  telemetryAt?: string | null;
   /** Umbral propio de consumo excesivo; sin valor se usa el de la casa. */
   consumptionAlertWatts?: number | null;
 }
@@ -70,7 +83,10 @@ export type AlertType =
   | 'POSSIBLE_ENERGY_LEAK'
   | 'DEVICE_OFFLINE'
   | 'AUTOMATIC_SHUTDOWN'
-  | 'MANUAL';
+  | 'MANUAL'
+  | 'EDGE_OFFLINE'
+  | 'ZIGBEE_PAIRING'
+  | 'SECURITY';
 
 export interface Alert {
   id: string;
@@ -288,4 +304,102 @@ export interface PerformanceMetricSummary {
   rating: 'good' | 'needs-improvement' | 'poor' | null;
   good: number;
   poor: number;
+}
+
+export type DeviceCapability =
+  | 'POWER' | 'BRIGHTNESS' | 'COLOR' | 'COLOR_TEMPERATURE' | 'TEMPERATURE' | 'HUMIDITY' | 'MOTION'
+  | 'PRESENCE' | 'BATTERY' | 'ENERGY' | 'VOLTAGE' | 'CURRENT' | 'CONTACT' | 'ILLUMINANCE';
+
+export interface DiscoveryCandidate {
+  id: string;
+  edgeId: string;
+  edgeName: string;
+  name: string;
+  provider: DeviceProvider;
+  protocol: DeviceProtocol;
+  address: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  service?: string | null;
+  capabilities: string[];
+  discoveredAt: string;
+}
+
+export type EdgeStatus = 'PENDING' | 'ONLINE' | 'OFFLINE' | 'REVOKED';
+
+export interface EdgeNode {
+  id: string;
+  name: string;
+  status: EdgeStatus;
+  version?: string | null;
+  platform?: string | null;
+  zigbeeBridgeState?: string | null;
+  zigbeePermitJoin: boolean;
+  zigbeePermitJoinUntil?: string | null;
+  queueDepth: number;
+  metrics: Record<string, unknown>;
+  lastHeartbeatAt?: string | null;
+  lastHelloAt?: string | null;
+  rotatedAt?: string | null;
+  previousSecretValidUntil?: string | null;
+  revokedAt?: string | null;
+  createdAt: string;
+}
+
+/** El secreto solo se entrega al enrolar o rotar: no se puede volver a consultar. */
+export interface EdgeEnrollment {
+  edge: EdgeNode;
+  secret: string;
+  env: Record<string, string>;
+}
+
+export interface IntegrationStatus {
+  broker: { state: 'DISABLED' | 'CONNECTED' | 'DISCONNECTED'; tls: boolean; mutualTls: boolean };
+  tuya: { configured: boolean };
+  zigbee: { edgeId: string; edgeName: string; edgeStatus: EdgeStatus; bridgeState: string; permitJoin: boolean; permitJoinUntil?: string | null }[];
+  providers: { provider: DeviceProvider; viaEdge: boolean; devices: number; online: number; candidates: number }[];
+  pendingCommands: number;
+  checkedAt: string;
+}
+
+export type CheckStatus = 'OK' | 'PENDING' | 'WARN' | 'FAIL';
+
+export interface DiagnosticCheck {
+  id: string;
+  label: string;
+  status: CheckStatus;
+  detail?: string | null;
+  hint?: string | null;
+}
+
+export interface Diagnostic {
+  integration: string;
+  overall: CheckStatus;
+  checks: DiagnosticCheck[];
+}
+
+export type DeviceEventType =
+  | 'DISCOVERED' | 'IMPORTED' | 'UPDATED' | 'CREDENTIALS_CHANGED' | 'ONLINE' | 'OFFLINE'
+  | 'COMMAND_SENT' | 'COMMAND_CONFIRMED' | 'COMMAND_FAILED' | 'COMMAND_EXPIRED'
+  | 'ZIGBEE_JOINED' | 'ZIGBEE_LEFT' | 'ERROR';
+
+export interface DeviceEvent {
+  id: string;
+  type: DeviceEventType;
+  details?: string | null;
+  edgeId?: string | null;
+  deviceId?: string | null;
+  createdAt: string;
+}
+
+export interface DeviceCommandRecord {
+  id: string;
+  command: DeviceCommand;
+  brightness?: number | null;
+  status: 'PENDING' | 'SENT' | 'CONFIRMED' | 'FAILED' | 'EXPIRED';
+  attempts: number;
+  error?: string | null;
+  requestedBy: string;
+  createdAt: string;
+  completedAt?: string | null;
 }

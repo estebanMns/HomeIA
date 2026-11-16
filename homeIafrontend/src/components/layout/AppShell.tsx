@@ -18,6 +18,7 @@ import {
   Menu,
   MessageCircle,
   Moon,
+  Radio,
   MoreHorizontal,
   Sparkles,
   Sun,
@@ -35,6 +36,7 @@ const navMain = [
   { href: '/dashboard/rooms', label: 'Habitaciones', icon: DoorOpen },
   { href: '/dashboard/devices', label: 'Dispositivos', icon: HousePlug },
   { href: '/dashboard/wifi', label: 'Conexión WiFi', icon: Wifi },
+  { href: '/dashboard/integrations', label: 'Ecosistema IoT', icon: Radio },
   { href: '/dashboard/analytics', label: 'Consumo y ahorro', icon: BarChart3 },
   { href: '/dashboard/alerts', label: 'Centro de alertas', icon: Bell },
 ];
@@ -53,6 +55,7 @@ const titleMap: Record<string, string> = {
   '/dashboard/rooms': 'Habitaciones',
   '/dashboard/devices': 'Dispositivos',
   '/dashboard/wifi': 'Dispositivos por WiFi',
+  '/dashboard/integrations': 'Ecosistema multimarca',
   '/dashboard/analytics': 'Consumo y ahorro',
   '/dashboard/alerts': 'Centro de alertas',
   '/dashboard/automation': 'Automatización e IA',

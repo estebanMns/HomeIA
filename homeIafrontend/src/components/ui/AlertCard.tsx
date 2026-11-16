@@ -22,6 +22,9 @@ export const alertTypeLabel: Record<AlertType, string> = {
   DEVICE_OFFLINE: 'Sin conexión',
   AUTOMATIC_SHUTDOWN: 'Apagado automático',
   MANUAL: 'Manual',
+  EDGE_OFFLINE: 'Edge sin conexión',
+  ZIGBEE_PAIRING: 'Emparejamiento Zigbee',
+  SECURITY: 'Seguridad',
 };
 
 export function formatDateTime(iso?: string) {

@@ -5,7 +5,9 @@ Los dispositivos propios (p. ej. un ESP32) se comunican con HomeIA por MQTT. Los
 ## Puesta en marcha
 
 1. Instala Docker Desktop y ábrelo.
-2. En el `.env` deben estar `MQTT_USERNAME` y `MQTT_PASSWORD`. Son las credenciales del broker y las usan tanto Mosquitto como el backend.
+2. En el `.env` define `MQTT_BACKEND_PASSWORD` (usuario `homeia-backend`) y, por cada ESP32, `MQTT_DEVICE_USERS="<id>:clave"` (el usuario MQTT es el id del dispositivo).
+   Cada usuario tiene su ACL (docker/mosquitto/acl, ver [SEGURIDAD_MQTT.md](SEGURIDAD_MQTT.md)). El backend usa
+   `MQTT_USERNAME=homeia-backend` y `MQTT_PASSWORD=<MQTT_BACKEND_PASSWORD>`.
 3. Levanta el broker desde la raíz del proyecto:
 
    ```

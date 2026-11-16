@@ -6,11 +6,15 @@ import com.homeia.domain.DeviceProvider;
 import com.homeia.domain.DeviceType;
 import com.homeia.domain.PowerState;
 import com.homeia.integration.DeviceReportEvent;
+import com.homeia.domain.DeviceProtocol;
+import com.homeia.domain.DeviceEventType;
+import com.homeia.domain.DeviceCapability;
 import com.homeia.integration.Json;
 import com.homeia.integration.tuya.TuyaApiException;
 import com.homeia.integration.tuya.TuyaCloudDevice;
 import com.homeia.integration.tuya.TuyaGateway;
 import com.homeia.persistence.DeviceEntity;
+import com.homeia.persistence.EdgeNodeEntity;
 import com.homeia.persistence.DeviceRepository;
 import com.homeia.persistence.EnergyReadingEntity;
 import com.homeia.persistence.EnergyReadingRepository;
@@ -45,6 +49,8 @@ public class DeviceService {
     private final TuyaGateway tuyaGateway;
     private final RoomService roomService;
     private final AuditService auditService;
+    private final DeviceEventService deviceEvents;
+    private final DeviceCredentialService credentialService;
 
     public enum Command { ON, OFF, TOGGLE, BRIGHTNESS, STATUS }
 
@@ -87,7 +93,72 @@ public class DeviceService {
     @Transactional
     public DeviceEntity update(AuthPrincipal principal, UUID deviceId, String name, UUID roomId,
                                boolean clearRoom, Boolean critical, Double consumptionAlertWatts) {
+        return update(principal, deviceId, new DeviceChanges(name, roomId, clearRoom, critical, consumptionAlertWatts,
+                null, null, null, null, null, null));
+    }
+
+    /**
+     * Cambios editables desde la interfaz. null = no cambiar. networkAddress solo para Wi-Fi LAN (IPv4 privada)
+     * y externalId solo para Zigbee (friendly_name); capabilities reemplaza las capacidades anunciadas.
+     */
+    public record DeviceChanges(String name, UUID roomId, boolean clearRoom, Boolean critical,
+                                Double consumptionAlertWatts, DeviceType type, String manufacturer, String model,
+                                String networkAddress, String externalId, List<String> capabilities) {
+    }
+
+    @Transactional
+    public DeviceEntity update(AuthPrincipal principal, UUID deviceId, DeviceChanges changes) {
         DeviceEntity device = get(principal.homeId(), deviceId);
+        String name = changes.name();
+        UUID roomId = changes.roomId();
+        boolean clearRoom = changes.clearRoom();
+        Boolean critical = changes.critical();
+        Double consumptionAlertWatts = changes.consumptionAlertWatts();
+        List<String> changed = new java.util.ArrayList<>();
+        if (changes.type() != null && changes.type() != device.getType()) {
+            device.setType(changes.type());
+            changed.add("tipo=" + changes.type());
+        }
+        if (changes.manufacturer() != null) {
+            device.setManufacturer(blankToNull(limit(changes.manufacturer(), 100)));
+            changed.add("fabricante");
+        }
+        if (changes.model() != null) {
+            device.setModel(blankToNull(limit(changes.model(), 120)));
+            changed.add("modelo");
+        }
+        if (changes.networkAddress() != null) {
+            if (!device.getProvider().usesIpAddress()) {
+                throw ApiException.badRequest("La dirección IP solo aplica a dispositivos Wi-Fi locales (Shelly, Tasmota, ESPHome, WLED)");
+            }
+            String address = changes.networkAddress().trim();
+            NetworkAddressPolicy.checkPrivateIpv4(address).ifPresent(problem -> {
+                throw ApiException.badRequest(problem);
+            });
+            device.setNetworkAddress(address);
+            device.setExternalId(address);
+            changed.add("ip=" + address);
+        }
+        if (changes.externalId() != null) {
+            if (device.getProvider() != DeviceProvider.ZIGBEE) {
+                throw ApiException.badRequest("El identificador externo editable solo aplica a Zigbee (friendly_name)");
+            }
+            String friendly = changes.externalId().trim();
+            NetworkAddressPolicy.checkZigbeeName(friendly).ifPresent(problem -> {
+                throw ApiException.badRequest(problem);
+            });
+            device.setExternalId(friendly);
+            changed.add("friendly_name=" + friendly);
+        }
+        if (changes.capabilities() != null) {
+            device.setCapabilitiesJson(Json.write(DeviceCapabilityPolicy.parse(changes.capabilities()).stream()
+                    .map(Enum::name).toList()));
+            changed.add("capacidades");
+        }
+        if (!changed.isEmpty()) {
+            deviceEvents.record(device.getHomeId(), device.getId(), device.getEdgeId(), DeviceEventType.UPDATED,
+                    String.join(", ", changed) + " · " + principal.email());
+        }
         if (name != null && !name.isBlank()) {
             device.setName(name.trim());
         }
@@ -136,11 +207,12 @@ public class DeviceService {
         if (command == Command.BRIGHTNESS && (brightness == null || brightness < 0 || brightness > 100)) {
             throw ApiException.badRequest("El brillo debe estar entre 0 y 100");
         }
-        if (command == Command.BRIGHTNESS && device.getType() != DeviceType.LIGHT) {
-            throw ApiException.badRequest("Solo las luces admiten brillo");
-        }
+        DeviceCapabilityPolicy.check(device.getType(), device.getProvider(), capabilities(device), action(command))
+                .ifPresent(problem -> {
+                    throw ApiException.badRequest(problem);
+                });
         DeviceDriver driver = drivers.forDevice(device);
-        driver.unavailableReason().ifPresent(reason -> {
+        driver.unavailableReason(device).ifPresent(reason -> {
             throw ApiException.unavailable(reason);
         });
         try {
@@ -164,8 +236,11 @@ public class DeviceService {
         if (device == null) {
             return false;
         }
+        if (DeviceCapabilityPolicy.check(device.getType(), device.getProvider(), capabilities(device), action(command)).isPresent()) {
+            return false;
+        }
         DeviceDriver driver = drivers.forDevice(device);
-        if (driver.unavailableReason().isPresent()) {
+        if (driver.unavailableReason(device).isPresent()) {
             return false;
         }
         try {
@@ -185,8 +260,117 @@ public class DeviceService {
     @Transactional
     public void onDeviceReport(DeviceReportEvent event) {
         deviceRepository.findById(event.deviceId()).ifPresentOrElse(
-                device -> applyReport(device, event.payload()),
+                device -> {
+                    if (device.getProvider() != DeviceProvider.MQTT) {
+                        // Los dispositivos de Tuya o de un Edge solo aceptan estado de su canal autenticado.
+                        log.warn("Reporte MQTT directo ignorado para {} ({})", device.getName(), device.getProvider());
+                        return;
+                    }
+                    applyReport(device, event.payload());
+                },
                 () -> log.debug("Reporte MQTT de un dispositivo desconocido: {}", event.deviceId()));
+    }
+
+    /** Registra un dispositivo ya descubierto y autorizado por el administrador. */
+    @Transactional
+    public DeviceEntity registerExternal(AuthPrincipal principal, String name, DeviceType type, UUID roomId,
+                                         boolean critical, DeviceProvider provider, String externalId,
+                                         DeviceProtocol protocol, String manufacturer, String model, String capabilitiesJson,
+                                         String networkAddress, UUID edgeId) {
+        if (name == null || name.isBlank() || externalId == null || externalId.isBlank())
+            throw ApiException.badRequest("Nombre e identificador externo son obligatorios");
+        if (provider == null || protocol == null) throw ApiException.badRequest("Proveedor y protocolo son obligatorios");
+        if (type == null) throw ApiException.badRequest("El tipo de dispositivo es obligatorio");
+        if (provider.viaEdge() && edgeId == null) throw ApiException.badRequest("El dispositivo debe incorporarse desde un HomeIA Edge");
+        (provider == DeviceProvider.ZIGBEE ? NetworkAddressPolicy.checkZigbeeName(externalId)
+                : provider.usesIpAddress() ? NetworkAddressPolicy.checkPrivateIpv4(networkAddress) : java.util.Optional.<String>empty())
+                .ifPresent(problem -> {
+                    throw ApiException.badRequest(problem);
+                });
+        if (deviceRepository.findByHomeIdAndProviderAndExternalId(principal.homeId(), provider, externalId).isPresent())
+            throw ApiException.conflict("El dispositivo ya está registrado");
+        if (roomId != null) roomService.get(principal.homeId(), roomId);
+        DeviceEntity device = new DeviceEntity();
+        device.setHomeId(principal.homeId()); device.setRoomId(roomId); device.setName(name.trim());
+        device.setType(type); device.setCritical(critical); device.setProvider(provider); device.setExternalId(externalId);
+        device.setProtocol(protocol); device.setManufacturer(manufacturer); device.setModel(model);
+        device.setCapabilitiesJson(capabilitiesJson == null ? "[]" : capabilitiesJson);
+        device.setNetworkAddress(networkAddress);
+        device.setEdgeId(edgeId);
+        device.setName(limit(device.getName(), 120));
+        device.setManufacturer(limit(manufacturer, 100));
+        device.setModel(limit(model, 120));
+        deviceRepository.save(device);
+        auditService.record(principal, "DEVICE_EXTERNAL_IMPORTED", "DEVICE", device.getId().toString(), provider + ":" + externalId);
+        deviceEvents.record(device.getHomeId(), device.getId(), edgeId, DeviceEventType.IMPORTED,
+                provider + " " + externalId + " · " + principal.email());
+        return device;
+    }
+
+    /**
+     * Estado de un dispositivo LAN que llega firmado por su HomeIA Edge (tras una orden o por sondeo).
+     * Zigbee llega en bruto y se normaliza aquí; el resto llega ya en formato HomeIA.
+     */
+    @Transactional
+    public void applyEdgeReport(EdgeNodeEntity edge, UUID deviceId, JsonNode state, boolean zigbeeRaw) {
+        if (deviceId == null || state == null || !state.isObject()) return;
+        deviceRepository.findByIdAndEdgeId(deviceId, edge.getId()).ifPresentOrElse(device -> {
+            JsonNode report = zigbeeRaw ? Json.read(Json.write(com.homeia.edge.ZigbeeStateNormalizer.normalize(state))) : state;
+            if (report.hasNonNull("reachable") && !report.get("reachable").asBoolean()) {
+                markOffline(device);
+                return;
+            }
+            applyReport(device, Json.write(report));
+        }, () -> log.debug("Estado de un dispositivo que no pertenece al Edge {}: {}", edge.getName(), deviceId));
+    }
+
+    /** Dispositivos que controla un Edge, para sincronizar su inventario tras un reinicio. */
+    @Transactional(readOnly = true)
+    public List<DeviceEntity> devicesOfEdge(UUID edgeId) {
+        return deviceRepository.findByEdgeId(edgeId);
+    }
+
+    @Transactional
+    public void setCredentials(AuthPrincipal principal, UUID deviceId, DeviceCredentialService.Credentials credentials) {
+        DeviceEntity device = get(principal.homeId(), deviceId);
+        if (!device.getProvider().usesIpAddress()) {
+            throw ApiException.badRequest("Las credenciales locales solo aplican a Shelly, Tasmota, ESPHome y WLED");
+        }
+        credentialService.set(deviceId, credentials);
+        boolean cleared = credentials == null || credentials.isEmpty();
+        auditService.record(principal, cleared ? "DEVICE_CREDENTIALS_CLEARED" : "DEVICE_CREDENTIALS_SET",
+                "DEVICE", deviceId.toString(), device.getName());
+        deviceEvents.record(device.getHomeId(), deviceId, device.getEdgeId(), DeviceEventType.CREDENTIALS_CHANGED,
+                (cleared ? "Credenciales eliminadas" : "Credenciales actualizadas") + " · " + principal.email());
+    }
+
+    public static java.util.Set<DeviceCapability> capabilities(DeviceEntity device) {
+        String json = device.getCapabilitiesJson();
+        if (json == null || json.isBlank()) return java.util.EnumSet.noneOf(DeviceCapability.class);
+        try {
+            JsonNode node = Json.read(json);
+            List<String> names = new java.util.ArrayList<>();
+            if (node.isArray()) node.forEach(n -> { if (n.isTextual()) names.add(n.asText()); });
+            return DeviceCapabilityPolicy.parse(names);
+        } catch (RuntimeException e) {
+            return java.util.EnumSet.noneOf(DeviceCapability.class);
+        }
+    }
+
+    private static DeviceCapabilityPolicy.Action action(Command command) {
+        return switch (command) {
+            case ON, OFF, TOGGLE -> DeviceCapabilityPolicy.Action.POWER;
+            case BRIGHTNESS -> DeviceCapabilityPolicy.Action.BRIGHTNESS;
+            case STATUS -> DeviceCapabilityPolicy.Action.STATUS;
+        };
+    }
+
+    private static String limit(String value, int max) {
+        return value == null || value.length() <= max ? value : value.substring(0, max);
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     /** Si el driver puede leer el estado (Tuya), lo aplica de inmediato. */
@@ -241,6 +425,8 @@ public class DeviceService {
         device.setType(type);
         device.setCritical(critical);
         device.setProvider(DeviceProvider.TUYA);
+        device.setProtocol(DeviceProtocol.CLOUD);
+        device.setManufacturer("Tuya");
         device.setExternalId(id);
         deviceRepository.save(device);
         auditService.record(principal, "DEVICE_TUYA_IMPORTED", "DEVICE", device.getId().toString(),
@@ -296,10 +482,28 @@ public class DeviceService {
         JsonNode report = Json.read(payload);
         Instant now = Instant.now();
         device.setLastSeenAt(now);
-        device.setConnectionStatus(ConnectionStatus.ONLINE);
+        if (device.getConnectionStatus() != ConnectionStatus.ONLINE) {
+            device.setConnectionStatus(ConnectionStatus.ONLINE);
+            deviceEvents.record(device.getHomeId(), device.getId(), device.getEdgeId(), DeviceEventType.ONLINE, null);
+        }
+        if (report.hasNonNull("telemetry") && report.get("telemetry").isObject()) {
+            JsonNode previous = Json.read(device.getTelemetryJson() == null ? "{}" : device.getTelemetryJson());
+            Map<String, Object> merged = new java.util.LinkedHashMap<>();
+            previous.fields().forEachRemaining(e -> merged.put(e.getKey(), e.getValue()));
+            report.get("telemetry").fields().forEachRemaining(e -> merged.put(e.getKey(), e.getValue()));
+            device.setTelemetryJson(Json.write(merged));
+            device.setTelemetryAt(now);
+        }
 
+        PowerState state = null;
         if (report.hasNonNull("powerState")) {
-            PowerState state = PowerState.valueOf(report.get("powerState").asText().toUpperCase());
+            try {
+                state = PowerState.valueOf(report.get("powerState").asText().toUpperCase(java.util.Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                log.debug("powerState inválido de {}: {}", device.getName(), report.get("powerState").asText());
+            }
+        }
+        if (state != null) {
             if (state != device.getPowerState()) {
                 device.setPowerState(state);
                 device.setLastStatusChangeAt(now);
@@ -327,6 +531,7 @@ public class DeviceService {
         if (device.getConnectionStatus() != ConnectionStatus.OFFLINE) {
             device.setConnectionStatus(ConnectionStatus.OFFLINE);
             device.setUpdatedAt(Instant.now());
+            deviceEvents.record(device.getHomeId(), device.getId(), device.getEdgeId(), DeviceEventType.OFFLINE, null);
         }
     }
 }

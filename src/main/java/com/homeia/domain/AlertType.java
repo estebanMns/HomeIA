@@ -10,5 +10,11 @@ public enum AlertType {
     /** Apagado automático ejecutado por la IA. */
     AUTOMATIC_SHUTDOWN,
     /** Alerta creada manualmente por un usuario. */
-    MANUAL
+    MANUAL,
+    /** HomeIA Edge dejó de enviar heartbeat. */
+    EDGE_OFFLINE,
+    /** Emparejamiento Zigbee abierto, dispositivo nuevo unido o cierre no verificado. */
+    ZIGBEE_PAIRING,
+    /** Evento de seguridad: firma inválida, credencial revocada en uso, etc. */
+    SECURITY
 }

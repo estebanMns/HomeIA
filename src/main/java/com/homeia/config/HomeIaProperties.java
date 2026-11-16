@@ -1,6 +1,7 @@
 package com.homeia.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
 /** Configuración de HomeIA. Todos los valores vienen de variables de entorno (.env), nada va fijo en código. */
 @ConfigurationProperties(prefix = "homeia")
@@ -12,8 +13,42 @@ public record HomeIaProperties(
         Gemini gemini,
         Tuya tuya,
         Automation automation,
-        Defaults defaults
+        Defaults defaults,
+        Security security,
+        Edge edge,
+        Retention retention
 ) {
+
+    /**
+     * @param secretsKey clave AES-256 (32 bytes en base64) para cifrar secretos de Edge y credenciales de
+     *                   dispositivos. Generar con: openssl rand -base64 32
+     */
+    public record Security(String secretsKey) {
+    }
+
+    /**
+     * HomeIA Edge.
+     * @param topicRoot               raíz de los tópicos: {topicRoot}/{edgeId}/{tipo}
+     * @param heartbeatTimeoutSeconds sin heartbeat durante este tiempo el Edge se marca OFFLINE
+     * @param replayWindowSeconds     tolerancia de reloj y ventana anti-repetición de los mensajes firmados
+     */
+    public record Edge(String topicRoot, long heartbeatTimeoutSeconds, long replayWindowSeconds) {
+        public String root() {
+            return topicRoot == null || topicRoot.isBlank() ? "homeia/edge" : topicRoot.trim().replaceAll("/+$", "");
+        }
+
+        public long heartbeatTimeout() {
+            return heartbeatTimeoutSeconds > 0 ? heartbeatTimeoutSeconds : 90;
+        }
+
+        public long replayWindow() {
+            return replayWindowSeconds > 0 ? replayWindowSeconds : 120;
+        }
+    }
+
+    /** Días que se conservan los datos de alto volumen. 0 o negativo = no se borran. */
+    public record Retention(int energyReadingDays, int deviceEventDays, int deviceCommandDays) {
+    }
 
     /**
      * Valores iniciales de la casa. El registro solo pide la cuenta; lo demás se toma de aquí
@@ -30,14 +65,34 @@ public record HomeIaProperties(
     public record Cors(String allowedOrigins) {
     }
 
+    /**
+     * @param caCertPath     PEM de la CA del broker (ssl://). Vacío = almacén de confianza de la JVM.
+     * @param clientCertPath PEM del certificado de cliente para mTLS (opcional)
+     * @param clientKeyPath  PEM PKCS#8 de la clave del certificado de cliente (opcional)
+     */
     public record Mqtt(boolean enabled, String brokerUrl, String username, String password,
-                       String clientId, String topicPrefix) {
+                       String clientId, String topicPrefix, String caCertPath, String clientCertPath,
+                       String clientKeyPath) {
+
+        public Mqtt(boolean enabled, String brokerUrl, String username, String password, String clientId,
+                    String topicPrefix) {
+            this(enabled, brokerUrl, username, password, clientId, topicPrefix, null, null, null);
+        }
+
         /** Quita espacios y comillas que se cuelan al copiar valores en el .env. */
+        @ConstructorBinding
         public Mqtt {
             brokerUrl = clean(brokerUrl);
             username = clean(username);
             clientId = clean(clientId);
             topicPrefix = clean(topicPrefix);
+            caCertPath = clean(caCertPath);
+            clientCertPath = clean(clientCertPath);
+            clientKeyPath = clean(clientKeyPath);
+        }
+
+        public boolean tls() {
+            return brokerUrl != null && (brokerUrl.startsWith("ssl://") || brokerUrl.startsWith("wss://"));
         }
 
         static String clean(String value) {

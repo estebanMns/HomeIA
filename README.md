@@ -4,7 +4,7 @@ Control inteligente de energía del hogar. Detecta habitaciones vacías, apaga l
 
 - **Backend:** Spring Boot 4.1 (Java 21), PostgreSQL con Flyway (esquema propio `homeia`) y JWT con refresh tokens.
 - **Frontend:** Next.js 16 (App Router) y TypeScript, en `homeIafrontend/`.
-- **Dispositivos:** Tuya / Smart Life por la nube ([docs/WIFI_TUYA.md](docs/WIFI_TUYA.md)), o propios por MQTT ([docs/MQTT.md](docs/MQTT.md)).
+- **Dispositivos:** Tuya / Smart Life, MQTT, Zigbee2MQTT, Shelly (Gen1 y Gen2/Plus/Pro), Tasmota, ESPHome y WLED a través de HomeIA Edge. Ver [docs/ECOSISTEMA_MULTIMARCA.md](docs/ECOSISTEMA_MULTIMARCA.md), [docs/EDGE.md](docs/EDGE.md) y [docs/SEGURIDAD_MQTT.md](docs/SEGURIDAD_MQTT.md).
 - **Notificaciones:** WhatsApp Cloud API ([docs/WHATSAPP_ALERTS.md](docs/WHATSAPP_ALERTS.md)) y correo SMTP para recuperar la contraseña.
 
 ## Estructura
@@ -55,6 +55,12 @@ Web Workers, patrones de rendering, event loop y métricas (Web Vitals, latencia
 ## Desplegar
 
 Frontend en Vercel y backend en Railway: [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
+
+## Trabajo pendiente
+
+Consulta [README_FALTA_IMPLEMENTAR.md](README_FALTA_IMPLEMENTAR.md): estado de las fases 4-6 y lo que aún requiere hardware real, infraestructura o pruebas externas. Antes de producción: [docs/SEGURIDAD_PRODUCCION.md](docs/SEGURIDAD_PRODUCCION.md).
+
+Variables nuevas del backend: `HOMEIA_SECRETS_KEY` (obligatoria en producción), `MQTT_CA_CERT`, `MQTT_CLIENT_CERT`, `MQTT_CLIENT_KEY`, `EDGE_TOPIC_ROOT`, `EDGE_HEARTBEAT_TIMEOUT_SECONDS`, `RETENTION_*`.
 
 ## Seguridad
 

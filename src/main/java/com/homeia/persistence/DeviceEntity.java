@@ -2,6 +2,7 @@ package com.homeia.persistence;
 
 import com.homeia.domain.ConnectionStatus;
 import com.homeia.domain.DeviceProvider;
+import com.homeia.domain.DeviceProtocol;
 import com.homeia.domain.DeviceType;
 import com.homeia.domain.PowerState;
 import jakarta.persistence.*;
@@ -34,7 +35,35 @@ public class DeviceEntity {
     @Column(nullable = false, length = 20)
     private DeviceProvider provider = DeviceProvider.MQTT;
 
-    /** Id del dispositivo en su plataforma (el device id de Tuya). Null para dispositivos MQTT. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "protocol", nullable = false, length = 16)
+    private DeviceProtocol protocol = DeviceProtocol.MQTT;
+
+    @Column(name = "manufacturer", length = 100)
+    private String manufacturer;
+
+    @Column(name = "model", length = 120)
+    private String model;
+
+    @Column(name = "network_address", length = 64)
+    private String networkAddress;
+
+    /** JSON serializado de capacidades normalizadas; no contiene credenciales. */
+    @Column(name = "capabilities_json", nullable = false, columnDefinition = "text")
+    private String capabilitiesJson = "[]";
+
+    /** HomeIA Edge que controla el dispositivo dentro de la LAN (Zigbee, Shelly, Tasmota, ESPHome, WLED). */
+    @Column(name = "edge_id")
+    private UUID edgeId;
+
+    /** Última telemetría normalizada (temperatura, humedad, batería, contacto, energía…). */
+    @Column(name = "telemetry_json", nullable = false, columnDefinition = "text")
+    private String telemetryJson = "{}";
+
+    @Column(name = "telemetry_at")
+    private Instant telemetryAt;
+
+    /** Id del dispositivo en su plataforma (el device id de Tuya o friendly_name Zigbee). Null para MQTT clásico. */
     @Column(name = "external_id", length = 64)
     private String externalId;
 

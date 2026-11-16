@@ -1,0 +1,70 @@
+# Stack local HomeIA Edge. Ejecutar en el equipo Linux que comparte LAN con los dispositivos.
+#   1. Enrola el Edge en HomeIA (Ecosistema IoT → HomeIA Edge) y copia HOMEIA_EDGE_ID / HOMEIA_EDGE_SECRET al .env
+#   2. Define MQTT_EDGE_PASSWORD, MQTT_ZIGBEE_PASSWORD, MQTT_BACKEND_PASSWORD y ZIGBEE_SERIAL_DEVICE
+#   3. cp data_zigbee_configuration.yaml data/zigbee2mqtt/configuration.yaml (y pon la contraseña de zigbee2mqtt)
+#   4. docker compose -f compose.edge.yaml up -d --build
+# Las imágenes están fijadas a versiones concretas: actualizar a propósito, no con "latest".
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0.20
+    restart: unless-stopped
+    # Solo LAN. No reenviar este puerto en el router.
+    ports:
+      - "1883:1883"
+    environment:
+      MQTT_BACKEND_PASSWORD: ${MQTT_BACKEND_PASSWORD:-}
+      MQTT_ZIGBEE_PASSWORD: ${MQTT_ZIGBEE_PASSWORD:?Define MQTT_ZIGBEE_PASSWORD}
+      HOMEIA_EDGE_ID: ${HOMEIA_EDGE_ID:?Define HOMEIA_EDGE_ID}
+      MQTT_EDGE_PASSWORD: ${MQTT_EDGE_PASSWORD:?Define MQTT_EDGE_PASSWORD}
+      MQTT_DEVICE_USERS: ${MQTT_DEVICE_USERS:-}
+    entrypoint: ["/bin/sh", "/mosquitto/config/init-users.sh"]
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./docker/mosquitto/acl:/mosquitto/config/acl:ro
+      - ./docker/mosquitto/init-users.sh:/mosquitto/config/init-users.sh:ro
+      - mosquitto-data:/mosquitto/data
+
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt:2.14.3
+    restart: unless-stopped
+    depends_on: [mosquitto]
+    volumes:
+      - ./data/zigbee2mqtt:/app/data
+      - /run/udev:/run/udev:ro
+    devices:
+      - ${ZIGBEE_SERIAL_DEVICE:-/dev/ttyUSB0}:/dev/ttyACM0
+    environment:
+      TZ: ${TZ:-America/Bogota}
+    # Interfaz web de Zigbee2MQTT solo en la máquina local (usar túnel SSH para verla desde otro equipo).
+    ports:
+      - "127.0.0.1:8081:8080"
+
+  homeia-edge:
+    build: ./edge
+    restart: unless-stopped
+    # Red del host: mDNS/SSDP multicast necesita estar en la LAN real. En Docker Desktop (macOS/Windows)
+    # esto no funciona: ejecuta el Edge directamente en el host con edge/install.sh o usa un equipo Linux.
+    network_mode: host
+    depends_on: [mosquitto, zigbee2mqtt]
+    environment:
+      HOMEIA_EDGE_ID: ${HOMEIA_EDGE_ID}
+      HOMEIA_EDGE_SECRET: ${HOMEIA_EDGE_SECRET:?Define HOMEIA_EDGE_SECRET}
+      HOMEIA_EDGE_TOPIC_ROOT: ${HOMEIA_EDGE_TOPIC_ROOT:-homeia/edge}
+      MQTT_HOST: 127.0.0.1
+      MQTT_PORT: 1883
+      MQTT_USERNAME: ${HOMEIA_EDGE_ID}
+      MQTT_PASSWORD: ${MQTT_EDGE_PASSWORD}
+      UPLINK_MQTT_HOST: ${UPLINK_MQTT_HOST:-}
+      UPLINK_MQTT_TLS: ${UPLINK_MQTT_TLS:-false}
+      UPLINK_MQTT_PORT: ${UPLINK_MQTT_PORT:-8883}
+      UPLINK_MQTT_CA_CERT: ${UPLINK_MQTT_CA_CERT:-}
+      UPLINK_MQTT_CLIENT_CERT: ${UPLINK_MQTT_CLIENT_CERT:-}
+      UPLINK_MQTT_CLIENT_KEY: ${UPLINK_MQTT_CLIENT_KEY:-}
+      ZIGBEE_ENABLED: ${ZIGBEE_ENABLED:-true}
+    volumes:
+      - edge-data:/var/lib/homeia-edge
+      - ./docker/mosquitto/certs:/etc/homeia-edge/certs:ro
+
+volumes:
+  mosquitto-data:
+  edge-data:

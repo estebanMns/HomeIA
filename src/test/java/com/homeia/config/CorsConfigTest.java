@@ -10,7 +10,7 @@ class CorsConfigTest {
 
     private CorsConfiguration corsFor(String allowedOrigins) {
         HomeIaProperties properties = new HomeIaProperties(null, new HomeIaProperties.Cors(allowedOrigins),
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null);
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/login");
         return new SecurityConfig().corsConfigurationSource(properties).getCorsConfiguration(request);
     }
