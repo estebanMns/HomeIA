@@ -5,14 +5,16 @@ homeassistant:
 mqtt:
   base_topic: zigbee2mqtt
   server: mqtt://mosquitto:1883
-  user: REPLACE_WITH_MQTT_USERNAME
-  password: REPLACE_WITH_MQTT_PASSWORD
+  # Usuario propio de Zigbee2MQTT (ACL: solo zigbee2mqtt/#). Contraseña = MQTT_ZIGBEE_PASSWORD del .env
+  user: zigbee2mqtt
+  password: REPLACE_WITH_MQTT_ZIGBEE_PASSWORD
 serial:
   port: /dev/ttyACM0
   adapter: ember # Cambiar a zstack si el coordinador usa TI Z-Stack.
 frontend:
   enabled: true
   port: 8080
+# El emparejamiento lo abre HomeIA con tiempo límite y lo audita; nunca dejarlo abierto por configuración.
 permit_join: false
 advanced:
   log_level: info

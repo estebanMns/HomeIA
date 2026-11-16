@@ -11,6 +11,13 @@ import type {
   AutomationStatus,
   Device,
   DeviceCommand,
+  DeviceCommandRecord,
+  DeviceEvent,
+  Diagnostic,
+  DiscoveryCandidate,
+  EdgeEnrollment,
+  EdgeNode,
+  IntegrationStatus,
   DeviceType,
   EnergyBucket,
   EnergySummary,
@@ -273,7 +280,11 @@ export const api = {
     request<Device[]>('GET', `/devices${query(filters)}`),
   createDevice: (body: { name: string; type: DeviceType; roomId?: string; critical: boolean }) =>
     request<Device>('POST', '/devices', body),
-  updateDevice: (id: string, body: { name?: string; roomId?: string; clearRoom?: boolean; critical?: boolean; consumptionAlertWatts?: number }) =>
+  updateDevice: (id: string, body: {
+    name?: string; roomId?: string; clearRoom?: boolean; critical?: boolean; consumptionAlertWatts?: number;
+    type?: DeviceType; manufacturer?: string; model?: string; networkAddress?: string; externalId?: string;
+    capabilities?: string[];
+  }) =>
     request<Device>('PUT', `/devices/${id}`, body),
   deleteDevice: (id: string) => request<void>('DELETE', `/devices/${id}`),
   /** confirmCritical: el backend exige confirmación explícita para apagar un dispositivo crítico. */
@@ -287,11 +298,31 @@ export const api = {
     request<Device>('POST', '/wifi/tuya/import', body),
   syncTuya: () => request<{ updated: number }>('POST', '/wifi/tuya/sync'),
   discoveryScan: () => request<{ accepted: boolean; message: string }>('POST', '/discovery/scan'),
-  discoveryCandidates: () => request<import('@/types').DiscoveryCandidate[]>('GET', '/discovery/candidates'),
-  zigbeePermitJoin: (seconds = 60) => request<{ accepted: boolean; seconds: number }>('POST', `/discovery/zigbee/permit-join?seconds=${seconds}`),
-  zigbeeClosePermitJoin: () => request<{ accepted: boolean; seconds: number }>('POST', '/discovery/zigbee/permit-join/close'),
-  claimDiscoveryCandidate: (id: string, body: { type: DeviceType; roomId?: string; critical: boolean }) =>
+  discoveryCandidates: () => request<DiscoveryCandidate[]>('GET', '/discovery/candidates'),
+  zigbeePermitJoin: (seconds = 60, edgeId?: string) =>
+    request<{ accepted: boolean; seconds: number; edges: number }>('POST',
+      `/discovery/zigbee/permit-join?seconds=${seconds}${edgeId ? `&edgeId=${edgeId}` : ''}`),
+  zigbeeClosePermitJoin: (edgeId?: string) =>
+    request<{ accepted: boolean; seconds: number }>('POST', `/discovery/zigbee/permit-join/close${edgeId ? `?edgeId=${edgeId}` : ''}`),
+  claimDiscoveryCandidate: (id: string, body: { type: DeviceType; roomId?: string; critical: boolean; name?: string }) =>
     request<Device>('POST', `/discovery/candidates/${id}/claim`, body),
+
+  edges: () => request<EdgeNode[]>('GET', '/edges'),
+  enrollEdge: (name: string) => request<EdgeEnrollment>('POST', '/edges', { name }),
+  rotateEdge: (id: string) => request<EdgeEnrollment>('POST', `/edges/${id}/rotate`),
+  revokeEdge: (id: string) => request<EdgeNode>('POST', `/edges/${id}/revoke`),
+  syncEdge: (id: string) => request<{ accepted: boolean }>('POST', `/edges/${id}/sync`),
+  deleteEdge: (id: string) => request<void>('DELETE', `/edges/${id}`),
+
+  integrationStatus: () => request<IntegrationStatus>('GET', '/integrations/status'),
+  integrationDiagnostics: (integration: string) => request<Diagnostic>('GET', `/integrations/${integration}/diagnostics`),
+  integrationEvents: (limit = 100) => request<DeviceEvent[]>('GET', `/integrations/events?limit=${limit}`),
+
+  deviceEvents: (id: string, limit = 100) => request<DeviceEvent[]>('GET', `/devices/${id}/events?limit=${limit}`),
+  deviceCommands: (id: string, limit = 30) => request<DeviceCommandRecord[]>('GET', `/devices/${id}/commands?limit=${limit}`),
+  deviceCredentialsStatus: (id: string) => request<{ configured: boolean }>('GET', `/devices/${id}/credentials`),
+  setDeviceCredentials: (id: string, body: { username?: string; password?: string; encryptionKey?: string }) =>
+    request<{ configured: boolean }>('PUT', `/devices/${id}/credentials`, body),
 
   changeMyPassword: (currentPassword: string, newPassword: string) =>
     request<{ success: boolean }>('PUT', '/users/me/password', { currentPassword, newPassword }),

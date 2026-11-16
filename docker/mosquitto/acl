@@ -1,0 +1,25 @@
+# ACL de HomeIA (mínimo privilegio). %u = usuario MQTT.
+# Convenciones de usuarios (los crea init-users.sh):
+#   homeia-backend          backend de HomeIA
+#   <uuid del Edge>         cada HomeIA Edge usa su HOMEIA_EDGE_ID como usuario
+#   zigbee2mqtt             Zigbee2MQTT
+#   <uuid del dispositivo>  dispositivos propios (ESP32): el usuario es el id que HomeIA les asigna
+
+# Backend: órdenes y estado de dispositivos propios y canal con todos los Edge.
+user homeia-backend
+topic readwrite homeia/devices/#
+topic readwrite homeia/edge/#
+
+# Zigbee2MQTT: solo su árbol.
+user zigbee2mqtt
+topic readwrite zigbee2mqtt/#
+
+# Reglas por patrón (aplican a todos los usuarios).
+# Cada Edge solo puede leer y escribir en su propio árbol. Su acceso a zigbee2mqtt/# lo añade init-users.sh
+# con un bloque "user <HOMEIA_EDGE_ID>" al generar /mosquitto/data/acl.
+pattern readwrite homeia/edge/%u/#
+
+# Dispositivos propios: el usuario <id> solo publica su estado y lee sus órdenes.
+# (Un Edge o dispositivo con otro id no tiene acceso a estos tópicos; los ids no coinciden entre sí.)
+pattern write homeia/devices/%u/state
+pattern read homeia/devices/%u/command

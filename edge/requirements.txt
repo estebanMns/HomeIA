@@ -1,2 +1,4 @@
 paho-mqtt==2.1.0
 zeroconf==0.147.0
+cryptography==46.0.3
+aioesphomeapi==42.7.0

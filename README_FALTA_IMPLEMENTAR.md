@@ -1,52 +1,56 @@
-# HomeIA — Falta implementar
+# HomeIA — Estado de las fases 4, 5 y 6
 
-Esta lista corresponde al trabajo que queda después de las **fases 1, 2 y 3** de la ampliación multimarca. El código de esta entrega incorpora el núcleo de proveedores, Zigbee2MQTT y drivers Wi-Fi básicos Shelly/Tasmota. No se debe interpretar como certificación de compatibilidad universal ni como despliegue listo para producción.
+Las fases 1-3 (núcleo multimarca, Zigbee2MQTT, Wi-Fi Shelly/Tasmota) quedaron integradas y las fases 4-6 se
+implementaron en código. Lo que sigue pendiente requiere hardware, infraestructura o personas, no desarrollo.
 
 ## Fase 4 — HomeIA Edge seguro y operación remota
 
-- [ ] Implementar enrolamiento del Edge por hogar con identidad única, rotación/revocación de credenciales y autenticación mutua.
-- [ ] Implementar canal privado Edge ↔ backend (VPN o túnel mTLS) para que un backend en Railway pueda enviar órdenes sin exponer MQTT a Internet.
-- [ ] Añadir heartbeat, versión, estado de salud, métricas, reconexión y cola local de órdenes/eventos.
-- [ ] Añadir confirmación de ejecución, correlación por `requestId`, expiración, deduplicación y reintentos idempotentes.
-- [ ] Implementar sincronización de inventario y estado cuando Edge o backend se reinicien.
-- [ ] Añadir instalador/actualizador del agente para Linux, Raspberry Pi y mini PC, con configuración segura.
-- [ ] Validar el descubrimiento multicast en cada plataforma; Docker Desktop en macOS/Windows puede requerir ejecutar Edge directamente en el host o usar un equipo Linux de la LAN.
+- [x] Enrolamiento por hogar con identidad única (`edge_nodes`), rotación con periodo de gracia y revocación inmediata.
+- [x] Autenticación mutua: HMAC-SHA256 en ambos sentidos con anti-repetición; credenciales cifradas para cada Edge.
+- [x] Canal privado sin exponer MQTT: broker en la nube con mTLS (`compose.broker-cloud.yaml`, `pki.sh`, soporte `ssl://` en backend y Edge) o VPN (guía WireGuard).
+- [x] Heartbeat con versión, uptime, cola local, métricas y estado Zigbee; reconexión automática; cola local SQLite.
+- [x] Órdenes con `requestId`, expiración, confirmación (`ack`), deduplicación en el Edge y reintentos idempotentes.
+- [x] Sincronización de inventario tras reinicio del Edge (`hello` → `sync`) o reconexión del backend; inventario persistente en el Edge.
+- [x] Instalador/actualizador systemd endurecido para Linux/Raspberry Pi/mini PC (`edge/install.sh`) e imagen Docker sin root.
+- [x] Matriz de plataformas para multicast documentada (docs/EDGE.md).
+- [ ] **Pendiente (hardware):** validar el descubrimiento multicast en cada plataforma real.
 
 ## Fase 5 — Dashboard e integración guiada
 
-- [ ] Crear asistente de configuración para Tuya, MQTT, Zigbee2MQTT, Shelly y Tasmota, con diagnóstico paso a paso.
-- [ ] Mostrar estado de Edge, coordinador, broker y cada integración por separado (no inferir que Zigbee está operativo solo porque MQTT conectó).
-- [ ] Mostrar capacidades y controles específicos por dispositivo; ocultar acciones no soportadas por el modelo.
-- [ ] Permitir editar nombre, habitación, tipo, fabricante/modelo y configuración de integración desde la interfaz.
-- [ ] Añadir historial de descubrimiento, importación, desconexión y errores por dispositivo.
-- [ ] Incorporar integración nativa ESPHome API; por ahora se detectan anuncios, pero no se incorpora ni controla mediante ese protocolo.
-- [ ] Añadir soporte para más fabricantes/protocolos Wi-Fi mediante adaptadores independientes y pruebas de compatibilidad.
+- [x] Asistente por integración (Edge, Zigbee, Shelly, Tasmota, ESPHome, WLED, MQTT, Tuya) con diagnóstico paso a paso.
+- [x] Estado separado de broker, cada Edge, cada coordinador Zigbee y cada proveedor.
+- [x] Controles por capacidad; acciones no soportadas ocultas en la interfaz y rechazadas por el backend.
+- [x] Edición de nombre, habitación, tipo, fabricante, modelo, IP / friendly_name y capacidades; credenciales cifradas.
+- [x] Historial por dispositivo (descubrimiento, importación, conexión, órdenes, errores) y actividad de la casa.
+- [x] ESPHome por API nativa (aioesphomeapi, cifrado Noise).
+- [x] Arquitectura de adaptadores independientes + WLED y Shelly Gen1 como nuevos adaptadores, con pruebas.
 
 ## Fase 6 — Pruebas, seguridad y producción
 
-- [ ] Ejecutar `./mvnw test`, `npx tsc --noEmit`, lint y build en un entorno con Maven/Node y resolver cualquier fallo específico del entorno.
-- [ ] Crear pruebas de integración MQTT/Flyway y pruebas automatizadas de los drivers Shelly, Tasmota y Zigbee2MQTT.
-- [ ] Validar físicamente modelos concretos de bombillos, relés, enchufes, sensores y coordinadores Zigbee; registrar los modelos certificados.
-- [ ] Implementar usuarios MQTT separados para backend, Edge, Zigbee2MQTT y dispositivos, con ACL de mínimo privilegio por tópico.
-- [ ] Habilitar TLS para MQTT o exigir VPN privada; no publicar el puerto 1883 en Internet.
-- [ ] Gestionar secretos por dispositivo (incluyendo HTTP Digest/contraseña Shelly y autenticación Tasmota) mediante almacenamiento cifrado y nunca en metadatos JSON.
-- [ ] Restringir y auditar el modo `permit_join`; añadir alertas de emparejamiento y cierre automático comprobado.
-- [ ] Añadir política de capacidades por dispositivo y validar cada comando antes de enviarlo (por ejemplo, brillo solo en luces regulables).
-- [ ] Añadir lectura/confirmación de estado para Shelly y Tasmota, y normalización de sensores Zigbee (temperatura, humedad, contacto, batería, presencia, energía).
-- [ ] Revisar límites de red/SSRF, autenticación, rate limiting, logs sin datos sensibles y pruebas de penetración antes de producción.
-- [ ] Fijar versiones de imágenes Docker y dependencias, añadir backups/retención de datos y monitorización operativa.
-
-## Configuración externa necesaria para probar las fases implementadas
-
-1. Un equipo Linux/Raspberry Pi/mini PC conectado a la misma LAN que los dispositivos Wi-Fi.
-2. Docker y Docker Compose instalados en ese equipo.
-3. Para Zigbee: coordinador USB compatible, puerto serie correcto y modelo Zigbee soportado por Zigbee2MQTT.
-4. Variables locales `MQTT_USERNAME`, `MQTT_PASSWORD` y `ZIGBEE_SERIAL_DEVICE`; copiar `data_zigbee_configuration.yaml` a `data/zigbee2mqtt/configuration.yaml` y reemplazar los valores de ejemplo.
-5. Backend conectado al broker local mediante `MQTT_ENABLED=true`, `MQTT_BROKER_URL` y credenciales coincidentes.
-6. Si el backend corre en Railway, establecer primero VPN/túnel privado con la LAN. No abrir el broker MQTT a Internet.
+- [x] Pruebas unitarias Java (firma, cifrado, anti-repetición, capacidades, SSRF, reintentos, permit_join, normalizador Zigbee).
+- [x] Pruebas de integración Flyway (PostgreSQL) y MQTT (Mosquitto) con Testcontainers (se omiten sin Docker).
+- [x] Pruebas del Edge (pytest): adaptadores, Zigbee, deduplicación, cola, firma compartida con Java.
+- [x] Usuarios MQTT separados con ACL de mínimo privilegio; TLS/mTLS; 1883 solo LAN.
+- [x] Secretos por dispositivo cifrados (AES-256-GCM), nunca en metadatos ni devueltos por la API.
+- [x] `permit_join` restringido (≤120 s), auditado, con alertas y cierre verificado.
+- [x] Política de capacidades validada antes de cada orden.
+- [x] Lectura/confirmación de estado de Shelly, Tasmota, WLED y ESPHome; normalización de sensores Zigbee.
+- [x] SSRF (solo IPv4 privadas, sin redirecciones), límites de frecuencia, logs sin secretos, tamaño máximo de mensajes.
+- [x] Imágenes y dependencias fijadas; Next.js actualizado a 16.4.6 (aviso GHSA-mfr8-8qww-v76h); backups, retención y métricas Prometheus.
+- [ ] **Pendiente (entorno):** ejecutar `./mvnw verify` en un entorno con acceso a Maven Central (ver abajo).
+- [ ] **Pendiente (hardware):** validar modelos físicos y completar docs/MODELOS_CERTIFICADOS.md.
+- [ ] **Pendiente (terceros):** prueba de penetración externa antes de producción (docs/SEGURIDAD_PRODUCCION.md).
 
 ## Estado de validación de esta entrega
 
-- El código fuente se modificó y se revisaron estáticamente los archivos principales.
-- Se debe ejecutar `python3 -m py_compile edge/homeia_edge/__main__.py` para validar sintaxis del agente.
-- No se declara compilación Maven, build de Next.js ni pruebas con hardware: el entorno de trabajo usado para preparar el paquete no dispone de Maven instalado ni del archivo `.mvn/wrapper/maven-wrapper.properties` que necesita el wrapper del proyecto.
+| Verificación | Resultado |
+|---|---|
+| `npx tsc --noEmit` | OK |
+| `npx eslint .` | OK |
+| `next build` | OK (compilando con la fuente local; en el entorno de trabajo no había acceso a Google Fonts) |
+| `npm audit --omit=dev` | 0 vulnerabilidades |
+| `pytest` en `edge/` | 27 pruebas OK |
+| Pruebas Java sin dependencias externas (firma, cifrado, políticas) | 21 pruebas OK con JDK 21 |
+| Interoperabilidad Java ↔ Python (firma y cifrado) | OK, vector compartido |
+| Carga de certificados de `pki.sh` en el backend (mTLS) | OK |
+| `./mvnw verify` completo | **No ejecutado**: el entorno de trabajo no tenía acceso a Maven Central. Ejecutarlo antes de desplegar. |

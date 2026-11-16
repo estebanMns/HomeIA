@@ -49,8 +49,19 @@ public class DeviceEntity {
     private String networkAddress;
 
     /** JSON serializado de capacidades normalizadas; no contiene credenciales. */
-    @Column(name = "capabilities_json", columnDefinition = "text")
+    @Column(name = "capabilities_json", nullable = false, columnDefinition = "text")
     private String capabilitiesJson = "[]";
+
+    /** HomeIA Edge que controla el dispositivo dentro de la LAN (Zigbee, Shelly, Tasmota, ESPHome, WLED). */
+    @Column(name = "edge_id")
+    private UUID edgeId;
+
+    /** Última telemetría normalizada (temperatura, humedad, batería, contacto, energía…). */
+    @Column(name = "telemetry_json", nullable = false, columnDefinition = "text")
+    private String telemetryJson = "{}";
+
+    @Column(name = "telemetry_at")
+    private Instant telemetryAt;
 
     /** Id del dispositivo en su plataforma (el device id de Tuya o friendly_name Zigbee). Null para MQTT clásico. */
     @Column(name = "external_id", length = 64)

@@ -1,0 +1,7 @@
+# El certificado del backend tiene CN=homeia-backend; el de cada Edge, CN=<HOMEIA_EDGE_ID>.
+user homeia-backend
+topic readwrite homeia/edge/#
+topic readwrite homeia/devices/#
+
+# Cada Edge solo accede a su propio árbol.
+pattern readwrite homeia/edge/%u/#

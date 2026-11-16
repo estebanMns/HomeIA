@@ -25,4 +25,8 @@ public interface DeviceRepository extends JpaRepository<DeviceEntity, UUID> {
     List<DeviceEntity> findAllByProviderAndExternalId(DeviceProvider provider, String externalId);
 
     long countByHomeId(UUID homeId);
+
+    List<DeviceEntity> findByEdgeId(UUID edgeId);
+
+    Optional<DeviceEntity> findByIdAndEdgeId(UUID id, UUID edgeId);
 }

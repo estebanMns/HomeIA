@@ -1,6 +1,7 @@
 # Backend de HomeIA (Spring Boot). Lo usa Railway; ver docs/DESPLIEGUE.md.
 
-FROM eclipse-temurin:21-jdk AS build
+# Versiones fijadas: actualizar a propósito y probar.
+FROM eclipse-temurin:21.0.8_9-jdk-noble AS build
 WORKDIR /app
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
@@ -9,7 +10,7 @@ RUN sed -i 's/\r$//' mvnw && chmod +x mvnw && ./mvnw -B -q dependency:go-offline
 COPY src src
 RUN ./mvnw -B -q -DskipTests package
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21.0.8_9-jre-noble
 WORKDIR /app
 RUN useradd --system --uid 10001 homeia
 COPY --from=build /app/target/*.jar app.jar

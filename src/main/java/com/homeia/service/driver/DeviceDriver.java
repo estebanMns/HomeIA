@@ -17,6 +17,11 @@ public interface DeviceDriver {
     /** Vacío si el driver puede enviar comandos ahora; si no, el motivo para mostrarlo al usuario. */
     Optional<String> unavailableReason();
 
+    /** Igual que {@link #unavailableReason()}, pero considerando el dispositivo (p. ej. si su Edge está en línea). */
+    default Optional<String> unavailableReason(DeviceEntity device) {
+        return unavailableReason();
+    }
+
     /**
      * Envía la orden al dispositivo. Lanza {@link DeviceDriverException} si no se pudo.
      * @param brightness 0–100, solo para {@link DeviceCommand#BRIGHTNESS}

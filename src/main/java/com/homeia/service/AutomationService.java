@@ -301,6 +301,18 @@ public class AutomationService {
      * Revisión de dispositivos en cada ciclo, con o sin IA: sin conexión, consumo excesivo sostenido y posible fuga.
      * Antes la detección de fugas vivía solo en las reglas de respaldo y desaparecía cuando Gemini respondía.
      */
+    /**
+     * Los sensores Zigbee a batería solo reportan al cambiar o cada varias horas: con 5 minutos parecerían
+     * desconectados todo el tiempo. Se usa el mismo criterio que Zigbee2MQTT para equipos pasivos (25 h).
+     */
+    static Duration offlineAfter(DeviceEntity device) {
+        if (device.getProvider() == com.homeia.domain.DeviceProvider.ZIGBEE
+                && DeviceService.capabilities(device).contains(com.homeia.domain.DeviceCapability.BATTERY)) {
+            return Duration.ofHours(25);
+        }
+        return OFFLINE_AFTER;
+    }
+
     private void checkDevices(AutomationSettingsEntity settings, HomeEntity home, ZoneId zone,
                               List<DeviceEntity> devices, Map<UUID, RoomState> roomStates,
                               Map<UUID, Double> kwhLastHour, Instant now) {
@@ -308,7 +320,7 @@ public class AutomationService {
         for (DeviceEntity device : devices) {
             if (device.getConnectionStatus() == ConnectionStatus.ONLINE
                     && device.getLastSeenAt() != null
-                    && device.getLastSeenAt().isBefore(now.minus(OFFLINE_AFTER))) {
+                    && device.getLastSeenAt().isBefore(now.minus(offlineAfter(device)))) {
                 deviceService.markOffline(device);
                 alertService.raiseOnce(homeId, device.getId(), AlertType.DEVICE_OFFLINE, AlertSeverity.INFO,
                         "Dispositivo sin conexión", device.getName() + " dejó de reportar su estado", device.getRoomId());

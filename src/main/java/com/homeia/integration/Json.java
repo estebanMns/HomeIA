@@ -26,4 +26,15 @@ public final class Json {
             throw new IllegalArgumentException("JSON inválido: " + e.getMessage(), e);
         }
     }
+
+    /** Objeto JSON como Map de tipos simples (para respuestas de la API, que usan otro serializador). */
+    @SuppressWarnings("unchecked")
+    public static java.util.Map<String, Object> toMap(String json) {
+        try {
+            Object value = MAPPER.readValue(json == null || json.isBlank() ? "{}" : json, Object.class);
+            return value instanceof java.util.Map<?, ?> map ? (java.util.Map<String, Object>) map : java.util.Map.of();
+        } catch (Exception e) {
+            return java.util.Map.of();
+        }
+    }
 }

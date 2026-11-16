@@ -1,0 +1,21 @@
+# Broker MQTT público con TLS mutuo (mTLS) para conectar el backend en la nube con los HomeIA Edge de cada casa.
+# Los Edge salen hacia este broker (no se abren puertos en las casas). Ver docs/SEGURIDAD_MQTT.md.
+#   ./docker/mosquitto/pki.sh ca && ./docker/mosquitto/pki.sh server broker.midominio.com
+#   ./docker/mosquitto/pki.sh client homeia-backend && ./docker/mosquitto/pki.sh client <HOMEIA_EDGE_ID>
+#   docker compose -f compose.broker-cloud.yaml up -d
+services:
+  mosquitto-cloud:
+    image: eclipse-mosquitto:2.0.20
+    restart: unless-stopped
+    ports:
+      - "8883:8883"
+    volumes:
+      - ./docker/mosquitto/mosquitto-cloud.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./docker/mosquitto/acl-cloud:/mosquitto/config/acl-cloud:ro
+      - ./docker/mosquitto/certs/ca.crt:/mosquitto/certs/ca.crt:ro
+      - ./docker/mosquitto/certs/server.crt:/mosquitto/certs/server.crt:ro
+      - ./docker/mosquitto/certs/server.key:/mosquitto/certs/server.key:ro
+      - mosquitto-cloud-data:/mosquitto/data
+
+volumes:
+  mosquitto-cloud-data:

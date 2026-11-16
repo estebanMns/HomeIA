@@ -1,25 +1,27 @@
-# Broker MQTT para los dispositivos propios (ESP32, etc.). Ver docs/MQTT.md.
+# Broker MQTT local para desarrollo y dispositivos propios (ESP32). Ver docs/MQTT.md.
 # Levantar:  docker compose -f compose.mqtt.yaml up -d
-# Usuario y contraseña se leen de MQTT_USERNAME y MQTT_PASSWORD en el .env (los mismos que usa el backend).
+# Usuarios separados con ACL (docker/mosquitto/acl): homeia-backend, zigbee2mqtt, cada Edge y cada dispositivo.
+# MQTT_USERNAME/MQTT_PASSWORD (usuario compartido heredado) siguen funcionando, pero no se recomiendan.
 services:
   mosquitto:
     image: 'eclipse-mosquitto:2.0.20'
     container_name: homeia-mosquitto
     restart: unless-stopped
     ports:
-      - '1883:1883'
+      - '127.0.0.1:1883:1883'
     environment:
-      MQTT_USERNAME: '${MQTT_USERNAME:?Define MQTT_USERNAME en .env}'
-      MQTT_PASSWORD: '${MQTT_PASSWORD:?Define MQTT_PASSWORD en .env}'
-    # El archivo de contraseñas se genera en cada arranque desde el .env: cambiar la contraseña
-    # solo requiere editar el .env y reiniciar el contenedor.
-    command: >
-      sh -c 'mosquitto_passwd -b -c /mosquitto/data/passwd "$$MQTT_USERNAME" "$$MQTT_PASSWORD"
-      && chown mosquitto:mosquitto /mosquitto/data/passwd
-      && chmod 0700 /mosquitto/data/passwd
-      && exec mosquitto -c /mosquitto/config/mosquitto.conf'
+      MQTT_BACKEND_PASSWORD: '${MQTT_BACKEND_PASSWORD:-}'
+      MQTT_ZIGBEE_PASSWORD: '${MQTT_ZIGBEE_PASSWORD:-}'
+      HOMEIA_EDGE_ID: '${HOMEIA_EDGE_ID:-}'
+      MQTT_EDGE_PASSWORD: '${MQTT_EDGE_PASSWORD:-}'
+      MQTT_USERNAME: '${MQTT_USERNAME:-}'
+      MQTT_PASSWORD: '${MQTT_PASSWORD:-}'
+      MQTT_DEVICE_USERS: '${MQTT_DEVICE_USERS:-}'
+    entrypoint: ['/bin/sh', '/mosquitto/config/init-users.sh']
     volumes:
       - './docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro'
+      - './docker/mosquitto/acl:/mosquitto/config/acl:ro'
+      - './docker/mosquitto/init-users.sh:/mosquitto/config/init-users.sh:ro'
       - 'mosquitto-data:/mosquitto/data'
 
 volumes:

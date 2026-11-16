@@ -35,6 +35,7 @@ import java.util.concurrent.Executors;
 public class MqttGateway implements MqttCallbackExtended {
 
     private final HomeIaProperties.Mqtt properties;
+    private final String edgeRoot;
     private final ApplicationEventPublisher events;
     /** La suscripción no se hace en el hilo de callbacks de Paho: una llamada bloqueante ahí puede trabarlo. */
     private final ExecutorService subscriber = Executors.newSingleThreadExecutor(r -> {
@@ -46,6 +47,7 @@ public class MqttGateway implements MqttCallbackExtended {
 
     public MqttGateway(HomeIaProperties properties, ApplicationEventPublisher events) {
         this.properties = properties.mqtt();
+        this.edgeRoot = properties.edge() == null ? "homeia/edge" : properties.edge().root();
         this.events = events;
     }
 
@@ -87,6 +89,12 @@ public class MqttGateway implements MqttCallbackExtended {
             MqttConnectOptions options = new MqttConnectOptions();
             options.setAutomaticReconnect(true);
             options.setCleanSession(true);
+            options.setKeepAliveInterval(30);
+            if (properties.tls()) {
+                options.setSocketFactory(MqttTls.socketFactory(properties.caCertPath(),
+                        properties.clientCertPath(), properties.clientKeyPath()));
+                options.setHttpsHostnameVerificationEnabled(true);
+            }
             if (properties.username() != null && !properties.username().isBlank()) {
                 options.setUserName(properties.username());
                 options.setPassword(properties.password().toCharArray());
@@ -104,7 +112,10 @@ public class MqttGateway implements MqttCallbackExtended {
 
     @Override
     public void connectComplete(boolean reconnect, String serverURI) {
-        subscriber.execute(this::subscribeToStates);
+        subscriber.execute(() -> {
+            subscribeToStates();
+            events.publishEvent(new MqttConnectedEvent(reconnect));
+        });
     }
 
     private void subscribeToStates() {
@@ -115,10 +126,9 @@ public class MqttGateway implements MqttCallbackExtended {
         String topic = stateTopicFilter();
         try {
             current.subscribe(topic, 1);
-            // Zigbee2MQTT comparte el broker, pero usa su propio árbol de tópicos.
-            current.subscribe("zigbee2mqtt/#", 1);
-            current.subscribe("homeia/edge/discovery", 1);
-            log.info("Suscrito a {} y a los tópicos de Zigbee2MQTT/HomeIA Edge", topic);
+            // Zigbee, Shelly, Tasmota, ESPHome y WLED llegan a través de HomeIA Edge, firmados.
+            current.subscribe(edgeTopicFilter(), 1);
+            log.info("Suscrito a {} y a {}", topic, edgeTopicFilter());
         } catch (Exception e) {
             log.error("No se pudo suscribir a {}: {}", topic, e.getMessage());
         }
@@ -128,12 +138,20 @@ public class MqttGateway implements MqttCallbackExtended {
         return properties.topicPrefix() + "/+/state";
     }
 
+    String edgeTopicFilter() {
+        return edgeRoot + "/+/+";
+    }
+
+    public String edgeRoot() {
+        return edgeRoot;
+    }
+
     /** Publica un comando JSON para un dispositivo. Lanza IllegalStateException si MQTT no está disponible. */
     public void publishCommand(UUID deviceId, String json) {
         publish(properties.topicPrefix() + "/" + deviceId + "/command", json);
     }
 
-    /** Publica en un tópico de integración (por ejemplo Zigbee2MQTT). El tópico se valida en el driver. */
+    /** Publica en un tópico (los mensajes a Edge ya van firmados por EdgeService). */
     public void publish(String topic, String json) {
         MqttClient current = client;
         if (current == null || !current.isConnected()) {
@@ -151,17 +169,19 @@ public class MqttGateway implements MqttCallbackExtended {
     @Override
     public void messageArrived(String topic, MqttMessage message) {
         try {
-            String[] parts = topic.split("/");
             String payload = new String(message.getPayload(), StandardCharsets.UTF_8);
-            if (topic.startsWith("zigbee2mqtt/") && !topic.startsWith("zigbee2mqtt/bridge/")) {
-                String friendlyName = topic.substring("zigbee2mqtt/".length());
-                if (!friendlyName.contains("/")) events.publishEvent(new ZigbeeReportEvent(friendlyName, payload));
+            if (payload.length() > 256 * 1024) {
+                log.warn("Mensaje MQTT demasiado grande en {} ({} bytes): ignorado", topic, payload.length());
                 return;
             }
-            if (topic.equals("homeia/edge/discovery")) {
-                events.publishEvent(new EdgeDiscoveryEvent(payload));
+            if (topic.startsWith(edgeRoot + "/")) {
+                String[] edgeParts = topic.substring(edgeRoot.length() + 1).split("/");
+                if (edgeParts.length == 2) {
+                    events.publishEvent(new EdgeMessageEvent(edgeParts[0], edgeParts[1], payload));
+                }
                 return;
             }
+            String[] parts = topic.split("/");
             UUID deviceId = UUID.fromString(parts[parts.length - 2]);
             events.publishEvent(new DeviceReportEvent(deviceId, payload));
         } catch (Exception e) {

@@ -1,0 +1,28 @@
+[Unit]
+Description=HomeIA Edge (descubrimiento y control local)
+Wants=network-online.target time-sync.target
+After=network-online.target time-sync.target
+
+[Service]
+Type=simple
+User=homeia-edge
+Group=homeia-edge
+EnvironmentFile=/etc/homeia-edge.env
+WorkingDirectory=/opt/homeia-edge
+ExecStart=/opt/homeia-edge/venv/bin/python -m homeia_edge
+Restart=always
+RestartSec=5
+# Endurecimiento: sin privilegios, sistema de archivos de solo lectura salvo sus datos.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/homeia-edge
+StateDirectory=homeia-edge
+StateDirectoryMode=0700
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+CapabilityBoundingSet=
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
