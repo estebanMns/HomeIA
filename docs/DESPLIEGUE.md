@@ -26,7 +26,9 @@ Los dos servicios despliegan automáticamente cada cambio que llega a `main`.
    | `FRONTEND_URL` | `https://<tu-app>.vercel.app`, para los enlaces de recuperación de contraseña |
    | `GEMINI_API_KEY` | clave de Google AI Studio |
    | `TUYA_ACCESS_ID`, `TUYA_ACCESS_SECRET`, `TUYA_REGION` | ver [WIFI_TUYA.md](WIFI_TUYA.md) |
-   | `MQTT_ENABLED` | `false` (solo Tuya; ver [MQTT.md](MQTT.md) para dispositivos propios) |
+   | `MQTT_ENABLED` | `true` (broker gratis en EMQX Cloud Serverless; `false` si solo se usa Tuya) |
+   | `MQTT_BROKER_URL` | `ssl://<deployment>.emqxsl.com:8883` (con `ssl://` y el puerto) |
+   | `MQTT_USERNAME` / `MQTT_PASSWORD` | Usuario creado en EMQX → Access Control → Authentication |
    | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM` | opcional: correo de recuperación de contraseña |
    | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ALERT_TEMPLATE` | opcional: ver [WHATSAPP_ALERTS.md](WHATSAPP_ALERTS.md) |
 
@@ -46,7 +48,7 @@ Los dos servicios despliegan automáticamente cada cambio que llega a `main`.
 
 - **Login:** `https://<tu-app>.vercel.app` muestra el login y permite ingresar.
 - **Conexión:** la barra superior dice **Datos en vivo**.
-- **Estado del sistema:** base de datos `UP`, Gemini `CONFIGURED` y MQTT `DISABLED` (esperado con solo Tuya).
+- **Estado del sistema:** base de datos `UP`, Gemini `CONFIGURED` y MQTT `UP` (conectado al broker de EMQX).
 
 ## Problemas comunes
 
