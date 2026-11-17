@@ -162,10 +162,10 @@ export default function DashboardPage() {
       <SectionTitle
         title="Tu hogar, habitación por habitación"
         subtitle="Dispositivos agrupados por habitación"
-        action={<Link href="/dashboard/rooms" className="btn btn-outline btn-sm">Ver habitaciones <ChevronRight size={15} /></Link>}
+        action={<Link href="/dashboard/devices" className="btn btn-outline btn-sm">Ver dispositivos <ChevronRight size={15} /></Link>}
       />
       {roomCards.length === 0 ? (
-        <Card className="muted">Aún no hay habitaciones. Créalas en la sección Habitaciones.</Card>
+        <Card className="muted">Aún no hay habitaciones. Escribe el nombre de la habitación al agregar o editar un dispositivo.</Card>
       ) : (
         <div className="rooms-grid">
           {roomCards.map((r) => (

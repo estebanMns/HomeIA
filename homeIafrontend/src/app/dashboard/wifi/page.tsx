@@ -8,6 +8,8 @@ import { useAsync } from '@/hooks/useAsync';
 import { useAuth } from '@/contexts/AuthContext';
 import type { DeviceType, Room, TuyaCloudDevice, WifiStatus } from '@/types';
 import { Badge, Button, Card, SectionTitle } from '@/components/ui/Primitives';
+import RoomField from '@/components/devices/RoomField';
+import { resolveRoomId } from '@/lib/rooms';
 
 /** Categorías de Tuya más comunes: cz/pc/kg = enchufes e interruptores; dj/dd/xdd/fwd = iluminación. */
 const LIGHT_CATEGORIES = ['dj', 'dd', 'xdd', 'fwd', 'dc', 'tgq', 'tgkg'];
@@ -20,7 +22,8 @@ const suggestedType = (category: string): DeviceType => (LIGHT_CATEGORIES.includ
 
 interface Draft {
   type: DeviceType;
-  roomId: string;
+  /** Nombre de la habitación: si no existe, se crea al agregar el dispositivo. */
+  roomName: string;
   critical: boolean;
 }
 
@@ -45,7 +48,7 @@ export default function WifiPage() {
   const added = useMemo(() => devices.filter((d) => d.importedAs), [devices]);
 
   const draftFor = (d: TuyaCloudDevice): Draft =>
-    drafts[d.id] ?? { type: suggestedType(d.category), roomId: '', critical: false };
+    drafts[d.id] ?? { type: suggestedType(d.category), roomName: '', critical: false };
   const setDraft = (d: TuyaCloudDevice, patch: Partial<Draft>) =>
     setDrafts((all) => ({ ...all, [d.id]: { ...draftFor(d), ...patch } }));
 
@@ -65,13 +68,16 @@ export default function WifiPage() {
 
   const importDevice = (d: TuyaCloudDevice) => {
     const draft = draftFor(d);
-    run(d.id, () => api.importTuyaDevice({
-      externalId: d.id,
-      name: d.name,
-      type: draft.type,
-      roomId: draft.roomId || undefined,
-      critical: draft.critical,
-    }), `${d.name} se agregó a la casa`);
+    run(d.id, async () => {
+      await api.importTuyaDevice({
+        externalId: d.id,
+        name: d.name,
+        type: draft.type,
+        roomId: await resolveRoomId(draft.roomName, rooms.data ?? []),
+        critical: draft.critical,
+      });
+      await rooms.reload();
+    }, `${d.name} se agregó a la casa`);
   };
 
   return (
@@ -197,11 +203,10 @@ export default function WifiPage() {
                       <option value="SMART_OUTLET">Tomacorriente</option>
                       <option value="LIGHT">Luz</option>
                     </select>
-                    <select aria-label={`Habitación de ${d.name}`} className="btn btn-outline btn-md" value={draft.roomId}
-                      onChange={(e) => setDraft(d, { roomId: e.target.value })}>
-                      <option value="">Sin habitación</option>
-                      {(rooms.data ?? []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                    </select>
+                    <div className="search">
+                      <RoomField id={`tuya-${d.id}`} value={draft.roomName} rooms={rooms.data ?? []}
+                        onChange={(roomName) => setDraft(d, { roomName })} />
+                    </div>
                     <label className="badge badge-gray wifi-critical">
                       <input type="checkbox" checked={draft.critical} onChange={(e) => setDraft(d, { critical: e.target.checked })} /> Crítico
                     </label>

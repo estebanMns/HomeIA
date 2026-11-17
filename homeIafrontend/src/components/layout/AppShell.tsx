@@ -10,7 +10,6 @@ import {
   BarChart3,
   Building2,
   ChevronDown,
-  DoorOpen,
   Gauge,
   Home,
   HousePlug,
@@ -33,7 +32,6 @@ import { Button, Logo } from '@/components/ui/Primitives';
 
 const navMain = [
   { href: '/dashboard', label: 'Resumen', icon: Home },
-  { href: '/dashboard/rooms', label: 'Habitaciones', icon: DoorOpen },
   { href: '/dashboard/devices', label: 'Dispositivos', icon: HousePlug },
   { href: '/dashboard/wifi', label: 'Conexión WiFi', icon: Wifi },
   { href: '/dashboard/integrations', label: 'Ecosistema IoT', icon: Radio },
@@ -52,7 +50,6 @@ const navAdmin = [
 
 const titleMap: Record<string, string> = {
   '/dashboard': 'Resumen',
-  '/dashboard/rooms': 'Habitaciones',
   '/dashboard/devices': 'Dispositivos',
   '/dashboard/wifi': 'Dispositivos por WiFi',
   '/dashboard/integrations': 'Ecosistema multimarca',
@@ -169,7 +166,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </main>
 
       <nav className="mobile-nav">
-        {[navMain[0], navMain[1], navMain[2], navMain[4]].map((item) => (
+        {[navMain[0], navMain[1], navMain[4], navMain[5]].map((item) => (
           <Link key={item.href} href={item.href} className={isActive(item.href) ? 'active' : ''}>
             <item.icon size={21} />
             <span>{item.label.replace('Centro de ', '')}</span>

@@ -34,6 +34,9 @@ export interface Room {
   name: string;
   location?: string;
   createdAt: string;
+  /** Último dato de presencia (sensor o marcado a mano); null si nunca se registró. */
+  occupied?: boolean | null;
+  presenceAt?: string | null;
 }
 
 export type DeviceType = 'LIGHT' | 'SMART_OUTLET' | 'PRESENCE_SENSOR';

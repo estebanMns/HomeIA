@@ -23,10 +23,19 @@ public class RoomController {
         this.roomService = roomService;
     }
 
-    public record RoomDto(UUID id, String name, String location, Instant createdAt) {
+    /** occupied: último dato de presencia (sensor o marcado a mano); null si nunca se registró. */
+    public record RoomDto(UUID id, String name, String location, Instant createdAt, Boolean occupied,
+                          Instant presenceAt) {
         static RoomDto from(RoomEntity room) {
-            return new RoomDto(room.getId(), room.getName(), room.getLocation(), room.getCreatedAt());
+            return new RoomDto(room.getId(), room.getName(), room.getLocation(), room.getCreatedAt(), null, null);
         }
+    }
+
+    private RoomDto withPresence(RoomEntity room) {
+        return roomService.latestPresence(room.getId())
+                .map(p -> new RoomDto(room.getId(), room.getName(), room.getLocation(), room.getCreatedAt(),
+                        p.isPresent(), p.getObservedAt()))
+                .orElseGet(() -> RoomDto.from(room));
     }
 
     public record RoomBody(@NotBlank String name, String location) {
@@ -40,7 +49,7 @@ public class RoomController {
 
     @GetMapping
     public List<RoomDto> list(@AuthenticationPrincipal AuthPrincipal principal) {
-        return roomService.list(principal.homeId()).stream().map(RoomDto::from).toList();
+        return roomService.list(principal.homeId()).stream().map(this::withPresence).toList();
     }
 
     @GetMapping("/{id}")

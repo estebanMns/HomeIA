@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { Device, DeviceCommandRecord, DeviceEvent, DeviceType, Home, Room } from '@/types';
 import { canDim, canSwitch, effectiveCapabilities, providerLabel, telemetrySummary, usesIpAddress } from '@/lib/capabilities';
 import LiveUsage from '@/components/devices/LiveUsage';
+import RoomField from '@/components/devices/RoomField';
+import { resolveRoomId } from '@/lib/rooms';
 import { formatDateTime } from '@/components/ui/AlertCard';
 import { Badge, Button, Card, SectionTitle, Switch } from '@/components/ui/Primitives';
 
@@ -26,7 +28,8 @@ interface Data {
 interface EditDraft {
   id: string;
   name: string;
-  roomId: string;
+  /** Nombre de la habitación: si no existe, se crea al guardar. Vacío = sin habitación. */
+  roomName: string;
   critical: boolean;
   /** Vacío = usar el umbral de la casa. */
   alertWatts: string;
@@ -67,12 +70,12 @@ export default function DevicesPage() {
   const [roomFilter, setRoomFilter] = useState('');
   const [message, setMessage] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', type: 'LIGHT' as DeviceType, roomId: '', critical: false });
+  const [form, setForm] = useState({ name: '', type: 'LIGHT' as DeviceType, roomName: '', critical: false });
   const [editing, setEditing] = useState<EditDraft | null>(null);
   const [credentials, setCredentials] = useState<CredentialsDraft | null>(null);
   const [history, setHistory] = useState<HistoryView | null>(null);
 
-  const roomName = useMemo(() => new Map((data?.rooms ?? []).map((r) => [r.id, r.name])), [data]);
+  const roomById = useMemo(() => new Map((data?.rooms ?? []).map((r) => [r.id, r])), [data]);
 
   // La búsqueda se filtra con un valor diferido: React atiende primero cada tecla (urgente) y
   // recalcula la tabla después, sin bloquear la escritura.
@@ -118,7 +121,7 @@ export default function DevicesPage() {
       await api.createDevice({
         name: form.name,
         type: form.type,
-        roomId: form.roomId || undefined,
+        roomId: await resolveRoomId(form.roomName, data?.rooms ?? []),
         critical: form.critical,
       });
       setForm({ ...form, name: '' });
@@ -129,7 +132,7 @@ export default function DevicesPage() {
     setEditing({
       id: d.id,
       name: d.name,
-      roomId: d.roomId ?? '',
+      roomName: d.roomId ? roomById.get(d.roomId)?.name ?? '' : '',
       critical: d.critical,
       alertWatts: d.consumptionAlertWatts ? String(d.consumptionAlertWatts) : '',
       ratedWatts: d.ratedWatts ? String(d.ratedWatts) : '',
@@ -174,8 +177,8 @@ export default function DevicesPage() {
     run(editing.id, async () => {
       await api.updateDevice(editing.id, {
         name: editing.name,
-        roomId: editing.roomId || undefined,
-        clearRoom: editing.roomId === '',
+        roomId: await resolveRoomId(editing.roomName, data?.rooms ?? []),
+        clearRoom: editing.roomName.trim() === '',
         critical: editing.critical,
         consumptionAlertWatts: editing.alertWatts === '' ? 0 : Number(editing.alertWatts),
         // Vacío (0) quita la estimación; solo aplica a dispositivos sin medidor.
@@ -212,12 +215,9 @@ export default function DevicesPage() {
             <option value="SMART_OUTLET">Tomacorriente</option>
             <option value="PRESENCE_SENSOR">Sensor de presencia</option>
           </select>
-          <select value={form.roomId} onChange={(e) => setForm({ ...form, roomId: e.target.value })} className="btn btn-outline btn-md">
-            <option value="">Sin habitación</option>
-            {data?.rooms.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
+          <div className="search">
+            <RoomField id="new-device" value={form.roomName} rooms={data?.rooms ?? []} onChange={(roomName) => setForm({ ...form, roomName })} />
+          </div>
           <label className="badge badge-gray" style={{ height: 38, padding: '0 12px', cursor: 'pointer' }}>
             <input type="checkbox" checked={form.critical} onChange={(e) => setForm({ ...form, critical: e.target.checked })} /> Crítico
           </label>
@@ -283,7 +283,9 @@ export default function DevicesPage() {
                     </div>
                   </div>
                   <span>{typeLabel[d.type]}</span>
-                  <span>{d.roomId ? roomName.get(d.roomId) ?? '—' : 'Sin habitación'}</span>
+                  <RoomCell room={d.roomId ? roomById.get(d.roomId) : undefined} canEdit={isAdmin} busy={busyId === d.id}
+                    onPresence={(room, present) => run(d.id, () => api.roomPresence(room.id, present),
+                      present ? `Presencia registrada en ${room.name}` : `${room.name} marcada como vacía`)} />
                   <div>
                     <span title={blockedForMember ? 'Solo el administrador puede deshabilitar tomacorrientes' : undefined}>
                       <Switch
@@ -357,12 +359,7 @@ export default function DevicesPage() {
             <label className="field">
               <span>Habitación</span>
               <div>
-                <select value={editing.roomId} onChange={(e) => setEditing({ ...editing, roomId: e.target.value })} style={{ width: '100%', border: 0, background: 'transparent', color: 'var(--text)' }}>
-                  <option value="">Sin habitación</option>
-                  {data?.rooms.map((r) => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
-                </select>
+                <RoomField id="edit-device" value={editing.roomName} rooms={data?.rooms ?? []} onChange={(roomName) => setEditing({ ...editing, roomName })} />
               </div>
             </label>
             <label className="field">
@@ -486,6 +483,42 @@ export default function DevicesPage() {
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Habitación del dispositivo y si hay alguien en ella. La automatización solo actúa con datos de presencia:
+ * sin sensor, el administrador la marca a mano desde aquí.
+ */
+function RoomCell({ room, canEdit, busy, onPresence }: {
+  room?: Room;
+  canEdit: boolean;
+  busy: boolean;
+  onPresence: (room: Room, present: boolean) => void;
+}) {
+  if (!room) return <span className="muted">Sin habitación</span>;
+  const occupied = room.occupied === true;
+  const label = room.occupied == null ? 'Sin datos de presencia' : occupied ? 'Hay alguien' : 'Vacía';
+  return (
+    <div>
+      <span>{room.name}</span>
+      {canEdit ? (
+        <button
+          type="button"
+          className={`badge ${occupied ? 'badge-green' : 'badge-gray'}`}
+          style={{ display: 'flex', marginTop: 4, border: 0, cursor: 'pointer' }}
+          disabled={busy}
+          title={occupied ? 'Marcar la habitación como vacía' : 'Marcar que hay alguien en la habitación'}
+          onClick={() => onPresence(room, !occupied)}
+        >
+          <span className="status-dot" /> {label}
+        </button>
+      ) : (
+        <span className={`badge ${occupied ? 'badge-green' : 'badge-gray'}`} style={{ display: 'flex', marginTop: 4 }}>
+          <span className="status-dot" /> {label}
+        </span>
       )}
     </div>
   );
