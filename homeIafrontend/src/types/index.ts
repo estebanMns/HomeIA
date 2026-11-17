@@ -75,6 +75,8 @@ export interface Device {
   telemetryAt?: string | null;
   /** Umbral propio de consumo excesivo; sin valor se usa el de la casa. */
   consumptionAlertWatts?: number | null;
+  /** Potencia de lo conectado: estima el consumo de interruptores sin medidor mientras están encendidos. */
+  ratedWatts?: number | null;
 }
 
 export type AlertSeverity = 'INFO' | 'WARNING' | 'CRITICAL';

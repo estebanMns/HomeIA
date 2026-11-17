@@ -94,7 +94,7 @@ public class DeviceService {
     public DeviceEntity update(AuthPrincipal principal, UUID deviceId, String name, UUID roomId,
                                boolean clearRoom, Boolean critical, Double consumptionAlertWatts) {
         return update(principal, deviceId, new DeviceChanges(name, roomId, clearRoom, critical, consumptionAlertWatts,
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null));
     }
 
     /**
@@ -103,7 +103,8 @@ public class DeviceService {
      */
     public record DeviceChanges(String name, UUID roomId, boolean clearRoom, Boolean critical,
                                 Double consumptionAlertWatts, DeviceType type, String manufacturer, String model,
-                                String networkAddress, String externalId, List<String> capabilities) {
+                                String networkAddress, String externalId, List<String> capabilities,
+                                Double ratedWatts) {
     }
 
     @Transactional
@@ -149,6 +150,15 @@ public class DeviceService {
             });
             device.setExternalId(friendly);
             changed.add("friendly_name=" + friendly);
+        }
+        if (changes.ratedWatts() != null) {
+            // 0 o negativo borra la potencia: el dispositivo deja de estimar consumo.
+            double watts = changes.ratedWatts();
+            if (watts > 20000) {
+                throw ApiException.badRequest("La potencia no puede superar 20.000 W");
+            }
+            device.setRatedWatts(watts > 0 ? watts : null);
+            changed.add("potencia=" + (watts > 0 ? Math.round(watts) + " W" : "sin estimar"));
         }
         if (changes.capabilities() != null) {
             device.setCapabilitiesJson(Json.write(DeviceCapabilityPolicy.parse(changes.capabilities()).stream()
@@ -478,6 +488,22 @@ public class DeviceService {
         }
     }
 
+    /**
+     * Dispositivos sin medidor (interruptores Tuya "kg", relés): consumo = potencia nominal mientras está
+     * encendido. Al cambiar de estado se guardan dos lecturas en el mismo instante (la potencia anterior y
+     * la nueva) para que la integración por trapecios de EnergyService cuente un escalón exacto y no una rampa.
+     */
+    private void recordEstimatedConsumption(DeviceEntity device, PowerState previous, Instant now) {
+        double rated = device.getRatedWatts();
+        double before = previous == PowerState.ON ? rated : 0;
+        double after = device.getPowerState() == PowerState.ON ? rated : 0;
+        if (before != after) {
+            energyRepository.save(new EnergyReadingEntity(device.getHomeId(), device.getId(), before, now));
+        }
+        device.setConsumptionWatts(after);
+        energyRepository.save(new EnergyReadingEntity(device.getHomeId(), device.getId(), after, now));
+    }
+
     private void applyReport(DeviceEntity device, String payload) {
         JsonNode report = Json.read(payload);
         Instant now = Instant.now();
@@ -495,6 +521,14 @@ public class DeviceService {
             device.setTelemetryAt(now);
         }
 
+        if (report.hasNonNull("capabilities") && report.get("capabilities").isArray()
+                && device.getProvider() == DeviceProvider.TUYA) {
+            List<String> caps = new java.util.ArrayList<>();
+            report.get("capabilities").forEach(c -> caps.add(c.asText()));
+            device.setCapabilitiesJson(Json.write(DeviceCapabilityPolicy.parse(caps).stream().map(Enum::name).toList()));
+        }
+
+        PowerState previousState = device.getPowerState();
         PowerState state = null;
         if (report.hasNonNull("powerState")) {
             try {
@@ -516,6 +550,8 @@ public class DeviceService {
             double watts = report.get("consumptionWatts").asDouble();
             device.setConsumptionWatts(watts);
             energyRepository.save(new EnergyReadingEntity(device.getHomeId(), device.getId(), watts, now));
+        } else if (device.getRatedWatts() != null && (state != null || device.getPowerState() == PowerState.ON)) {
+            recordEstimatedConsumption(device, previousState, now);
         }
         if (report.hasNonNull("presence") && device.getRoomId() != null) {
             boolean present = report.get("presence").asBoolean();

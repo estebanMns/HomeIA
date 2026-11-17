@@ -5,8 +5,9 @@ import { History, KeyRound, Lightbulb, Pencil, Plug, Plus, Radio, Search, Shield
 import { api, ApiError } from '@/services/api';
 import { useAsync } from '@/hooks/useAsync';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Device, DeviceCommandRecord, DeviceEvent, DeviceType, Room } from '@/types';
-import { canDim, canSwitch, providerLabel, telemetrySummary, usesIpAddress } from '@/lib/capabilities';
+import type { Device, DeviceCommandRecord, DeviceEvent, DeviceType, Home, Room } from '@/types';
+import { canDim, canSwitch, effectiveCapabilities, providerLabel, telemetrySummary, usesIpAddress } from '@/lib/capabilities';
+import LiveUsage from '@/components/devices/LiveUsage';
 import { formatDateTime } from '@/components/ui/AlertCard';
 import { Badge, Button, Card, SectionTitle, Switch } from '@/components/ui/Primitives';
 
@@ -19,6 +20,7 @@ const typeLabel: Record<DeviceType, string> = {
 interface Data {
   devices: Device[];
   rooms: Room[];
+  home: Home | null;
 }
 
 interface EditDraft {
@@ -28,6 +30,9 @@ interface EditDraft {
   critical: boolean;
   /** Vacío = usar el umbral de la casa. */
   alertWatts: string;
+  /** Vacío = sin estimar. Solo para dispositivos sin medidor. */
+  ratedWatts: string;
+  metered: boolean;
   type: DeviceType;
   manufacturer: string;
   model: string;
@@ -54,8 +59,8 @@ export default function DevicesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
   const { data, error, loading, reload } = useAsync<Data>(async () => {
-    const [devices, rooms] = await Promise.all([api.devices(), api.rooms()]);
-    return { devices, rooms };
+    const [devices, rooms, home] = await Promise.all([api.devices(), api.rooms(), api.home().catch(() => null)]);
+    return { devices, rooms, home };
   }, [], 30000);
 
   const [query, setQuery] = useState('');
@@ -127,6 +132,8 @@ export default function DevicesPage() {
       roomId: d.roomId ?? '',
       critical: d.critical,
       alertWatts: d.consumptionAlertWatts ? String(d.consumptionAlertWatts) : '',
+      ratedWatts: d.ratedWatts ? String(d.ratedWatts) : '',
+      metered: effectiveCapabilities(d).has('ENERGY'),
       type: d.type,
       manufacturer: d.manufacturer ?? '',
       model: d.model ?? '',
@@ -171,6 +178,8 @@ export default function DevicesPage() {
         clearRoom: editing.roomId === '',
         critical: editing.critical,
         consumptionAlertWatts: editing.alertWatts === '' ? 0 : Number(editing.alertWatts),
+        // Vacío (0) quita la estimación; solo aplica a dispositivos sin medidor.
+        ratedWatts: editing.metered ? undefined : editing.ratedWatts === '' ? 0 : Number(editing.ratedWatts),
         type: editing.type,
         manufacturer: editing.manufacturer,
         model: editing.model,
@@ -287,7 +296,7 @@ export default function DevicesPage() {
                   <Badge tone={online ? 'green' : 'gray'}>
                     {online ? <Wifi size={12} /> : <WifiOff size={12} />} {online ? 'En línea' : 'Sin conexión'}
                   </Badge>
-                  <strong>{d.consumptionWatts.toLocaleString('es-CO')} W</strong>
+                  <LiveUsage device={d} pricePerKwh={data?.home?.electricityPricePerKwh} currency={data?.home?.currency} />
                   {dimmable && online ? (
                     <input
                       type="range"
@@ -387,6 +396,16 @@ export default function DevicesPage() {
               <span>Umbral de consumo excesivo (W)</span>
               <div><input type="number" min={1} placeholder="Vacío = el de la casa" value={editing.alertWatts} onChange={(e) => setEditing({ ...editing, alertWatts: e.target.value })} /></div>
             </label>
+            {!editing.metered && editing.type !== 'PRESENCE_SENSOR' && (
+              <label className="field">
+                <span>Potencia de lo conectado (W)</span>
+                <div><input type="number" min={1} max={20000} step="0.1" placeholder="Ej.: 9 para un bombillo LED" value={editing.ratedWatts} onChange={(e) => setEditing({ ...editing, ratedWatts: e.target.value })} /></div>
+                <small className="muted">
+                  Este dispositivo no mide energía. Con la potencia (está en la etiqueta del bombillo o aparato) HomeIA estima el
+                  consumo mientras está encendido. Vacío = sin estimar.
+                </small>
+              </label>
+            )}
             <label className="badge badge-gray" style={{ height: 38, padding: '0 12px', cursor: 'pointer', marginBottom: 12 }}>
               <input type="checkbox" checked={editing.critical} onChange={(e) => setEditing({ ...editing, critical: e.target.checked })} /> Crítico (la automatización nunca lo apaga)
             </label>

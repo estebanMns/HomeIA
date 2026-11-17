@@ -87,6 +87,10 @@ public class DeviceEntity {
     @Column(name = "consumption_watts", nullable = false)
     private double consumptionWatts;
 
+    /** Potencia nominal de lo conectado, para estimar el consumo de dispositivos sin medidor. Null = sin estimar. */
+    @Column(name = "rated_watts")
+    private Double ratedWatts;
+
     /** Umbral propio de consumo excesivo. Null = se usa el umbral global de la casa. */
     @Column(name = "consumption_alert_watts")
     private Double consumptionAlertWatts;

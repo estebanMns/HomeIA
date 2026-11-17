@@ -283,7 +283,7 @@ export const api = {
   updateDevice: (id: string, body: {
     name?: string; roomId?: string; clearRoom?: boolean; critical?: boolean; consumptionAlertWatts?: number;
     type?: DeviceType; manufacturer?: string; model?: string; networkAddress?: string; externalId?: string;
-    capabilities?: string[];
+    capabilities?: string[]; ratedWatts?: number;
   }) =>
     request<Device>('PUT', `/devices/${id}`, body),
   deleteDevice: (id: string) => request<void>('DELETE', `/devices/${id}`),

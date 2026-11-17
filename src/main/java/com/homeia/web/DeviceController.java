@@ -55,7 +55,7 @@ public class DeviceController {
                             DeviceProvider provider, String externalId, Double consumptionAlertWatts,
                             com.homeia.domain.DeviceProtocol protocol, String manufacturer, String model, String networkAddress,
                             String capabilitiesJson, UUID edgeId, String telemetryJson, Instant telemetryAt,
-                            List<String> effectiveCapabilities) {
+                            List<String> effectiveCapabilities, Double ratedWatts) {
         static DeviceDto from(DeviceEntity d) {
             return new DeviceDto(d.getId(), d.getName(), d.getRoomId(), d.getType(), d.getConnectionStatus(),
                     d.getPowerState(), d.getBrightness(), d.getConsumptionWatts(), d.isCritical(), d.getPresence(),
@@ -63,7 +63,7 @@ public class DeviceController {
                     d.getConsumptionAlertWatts(), d.getProtocol(), d.getManufacturer(), d.getModel(), d.getNetworkAddress(),
                     d.getCapabilitiesJson(), d.getEdgeId(), d.getTelemetryJson(), d.getTelemetryAt(),
                     DeviceCapabilityPolicy.effective(d.getType(), d.getProvider(), DeviceService.capabilities(d))
-                            .stream().map(Enum::name).sorted().toList());
+                            .stream().map(Enum::name).sorted().toList(), d.getRatedWatts());
         }
     }
 
@@ -73,7 +73,8 @@ public class DeviceController {
     /** consumptionAlertWatts: umbral propio del dispositivo; null no lo cambia, 0 o negativo vuelve al de la casa. */
     public record UpdateDeviceBody(String name, UUID roomId, Boolean clearRoom, Boolean critical,
                                    Double consumptionAlertWatts, DeviceType type, String manufacturer, String model,
-                                   String networkAddress, String externalId, List<String> capabilities) {
+                                   String networkAddress, String externalId, List<String> capabilities,
+                                   Double ratedWatts) {
     }
 
     /** Campos vacíos o nulos = sin credencial; todos vacíos borra las credenciales. */
@@ -117,7 +118,7 @@ public class DeviceController {
                             @RequestBody UpdateDeviceBody body) {
         DeviceEntity device = deviceService.update(principal, id, new DeviceService.DeviceChanges(body.name(), body.roomId(),
                 Boolean.TRUE.equals(body.clearRoom()), body.critical(), body.consumptionAlertWatts(), body.type(),
-                body.manufacturer(), body.model(), body.networkAddress(), body.externalId(), body.capabilities()));
+                body.manufacturer(), body.model(), body.networkAddress(), body.externalId(), body.capabilities(), body.ratedWatts()));
         edgeInbound.resyncForDevice(device);
         return DeviceDto.from(device);
     }

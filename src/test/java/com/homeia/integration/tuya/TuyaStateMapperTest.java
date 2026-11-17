@@ -70,4 +70,16 @@ class TuyaStateMapperTest {
         assertEquals("switch", TuyaStateMapper.powerCode(List.of(dp("switch", true))).orElseThrow());
         assertTrue(TuyaStateMapper.powerCode(List.of(dp("temp_current", 210L))).isEmpty(), "un sensor no tiene encendido");
     }
+
+    @Test
+    void lasCapacidadesSalenDeLoQueReportaElDispositivo() {
+        // Interruptor de pared 2 botones (SK3-02): sin brillo ni medidor
+        List<TuyaDataPoint> interruptor = List.of(dp("switch_1", true), dp("switch_2", false),
+                dp("countdown_1", 0L), dp("switch_backlight", true));
+        assertEquals(List.of("POWER"), TuyaStateMapper.toReport(interruptor, Map.of()).get("capabilities"));
+        assertEquals(List.of("POWER", "BRIGHTNESS"),
+                TuyaStateMapper.capabilities(List.of(dp("switch_led", true), dp("bright_value_v2", 500L))));
+        assertEquals(List.of("POWER", "ENERGY"),
+                TuyaStateMapper.capabilities(List.of(dp("switch_1", true), dp("cur_power", 150L))));
+    }
 }

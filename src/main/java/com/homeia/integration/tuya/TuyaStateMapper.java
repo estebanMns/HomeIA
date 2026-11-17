@@ -48,7 +48,20 @@ public final class TuyaStateMapper {
                 report.put("brightness", (int) Math.max(0, Math.min(100, Math.round(raw.doubleValue() / max * 100))));
             }
         });
+        report.put("capabilities", capabilities(points));
         return report;
+    }
+
+    /**
+     * Lo que el dispositivo realmente permite, según los códigos que reporta. Sin esto se suponía brillo
+     * en toda "luz" Tuya, y un interruptor de pared (switch_1/switch_2) mostraba un control que Tuya rechaza.
+     */
+    public static List<String> capabilities(List<TuyaDataPoint> points) {
+        List<String> caps = new java.util.ArrayList<>();
+        if (powerCode(points).isPresent()) caps.add("POWER");
+        if (brightnessCode(points).isPresent()) caps.add("BRIGHTNESS");
+        if (points.stream().anyMatch(p -> p.code().equals(CURRENT_POWER))) caps.add("ENERGY");
+        return caps;
     }
 
     /** Código de encendido que usa este dispositivo (switch_1 en enchufes, switch_led en bombillos…). */
