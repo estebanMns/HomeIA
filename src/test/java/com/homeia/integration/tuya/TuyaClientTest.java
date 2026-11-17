@@ -52,8 +52,10 @@ class TuyaClientTest {
                     StringBuilder page = new StringBuilder("{\"success\":true,\"result\":[");
                     for (int i = 0; i < 20; i++) {
                         if (i > 0) page.append(',');
+                        // Formato real de /v2.0/cloud/thing/device: camelCase
                         page.append("{\"id\":\"dev").append(i).append("\",\"name\":\"Enchufe ").append(i)
-                                .append("\",\"custom_name\":\"\",\"category\":\"cz\",\"product_name\":\"Smart Plug\",\"is_online\":true}");
+                                .append("\",\"customName\":\"").append(i == 0 ? "Habitacion Esteban" : "")
+                                .append("\",\"category\":\"cz\",\"productName\":\"Smart Plug\",\"isOnline\":true}");
                     }
                     return page.append("]}").toString();
                 }
@@ -86,6 +88,10 @@ class TuyaClientTest {
         assertEquals(21, devices.size());
         assertEquals("Lámpara sala", devices.get(20).name(), "usa el nombre personalizado si existe");
         assertFalse(devices.get(20).online());
+        assertEquals("Habitacion Esteban", devices.get(0).name(), "lee customName (camelCase, formato real)");
+        assertTrue(devices.get(0).online(), "lee isOnline (camelCase, formato real)");
+        assertEquals("Smart Plug", devices.get(0).productName());
+        assertEquals("Enchufe 1", devices.get(1).name(), "sin nombre personalizado usa el de fábrica");
         assertTrue(fake.calls.contains("GET /v2.0/cloud/thing/device?last_id=dev19&page_size=20"));
     }
 

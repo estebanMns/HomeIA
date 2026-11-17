@@ -55,16 +55,23 @@ public class TuyaClient {
             JsonNode result = call("GET", "/v2.0/cloud/thing/device", query, null);
             int count = 0;
             for (JsonNode d : result) {
-                String name = d.path("custom_name").asText("");
+                // /v2.0/cloud/thing/device responde en camelCase (customName, isOnline, productName);
+                // otras versiones de la API usan snake_case. Leer solo snake_case dejaba todo "desconectado".
+                String name = field(d, "customName", "custom_name").asText("");
                 if (name.isBlank()) name = d.path("name").asText("Dispositivo Tuya");
                 devices.add(new TuyaCloudDevice(d.path("id").asText(), name, d.path("category").asText(""),
-                        d.path("product_name").asText(""), d.path("is_online").asBoolean(false)));
+                        field(d, "productName", "product_name").asText(""),
+                        field(d, "isOnline", "is_online").asBoolean(false)));
                 lastId = d.path("id").asText();
                 count++;
             }
             if (count < PAGE_SIZE) break;
         }
         return devices;
+    }
+
+    private static JsonNode field(JsonNode node, String camel, String snake) {
+        return node.hasNonNull(camel) ? node.path(camel) : node.path(snake);
     }
 
     /** Valores actuales del dispositivo (switch_1, cur_power, bright_value_v2…). */
