@@ -81,3 +81,8 @@ data/
 # Copias de seguridad y certificados
 backups/
 docker/mosquitto/certs/
+
+# Copias comprimidas del proyecto (pueden incluir el .env)
+*.rar
+*.zip
+*.7z
