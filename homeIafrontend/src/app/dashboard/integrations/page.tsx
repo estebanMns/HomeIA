@@ -31,59 +31,65 @@ const checkLabel: Record<CheckStatus, string> = { OK: 'Correcto', PENDING: 'Pend
 const integrations: { id: string; name: string; steps: string[] }[] = [
   {
     id: 'EDGE', name: 'HomeIA Edge', steps: [
-      'Enrola un Edge abajo y guarda HOMEIA_EDGE_ID y HOMEIA_EDGE_SECRET (el secreto solo se muestra una vez).',
-      'En un equipo Linux / Raspberry Pi de la LAN: sudo ./edge/install.sh y completa /etc/homeia-edge.env (o usa compose.edge.yaml).',
-      'Conecta el backend al mismo broker: VPN privada o broker en la nube con mTLS (docs/SEGURIDAD_MQTT.md).',
-      'Comprueba que el heartbeat aparezca en verde en esta página.',
+      'Necesitas un computador o una Raspberry Pi que se quede encendido en tu casa, conectado a la misma red WiFi que los dispositivos.',
+      'Escribe un nombre abajo (por ejemplo "Edge casa") y pulsa "Enrolar Edge".',
+      'Copia el ID del Edge y la clave secreta que aparecen. La clave solo se muestra una vez: guárdala bien.',
+      'Instala el programa HomeIA Edge en ese equipo y pega el ID y la clave cuando te los pida.',
+      'Cuando se conecte, el Edge aparece "En línea" en esta página. Ya puedes pulsar "Buscar dispositivos".',
     ],
   },
   {
     id: 'ZIGBEE', name: 'Zigbee2MQTT', steps: [
-      'Conecta el coordinador USB al equipo del Edge y define ZIGBEE_SERIAL_DEVICE (/dev/serial/by-id/...).',
-      'Copia data_zigbee_configuration.yaml a data/zigbee2mqtt/configuration.yaml con el usuario zigbee2mqtt.',
-      'Levanta compose.edge.yaml y verifica que el coordinador aparezca "online".',
-      'Pulsa "Permitir Zigbee" (máx. 120 s), empareja el equipo y luego incorpóralo desde los candidatos.',
+      'Necesitas un HomeIA Edge en línea y un adaptador Zigbee USB (por ejemplo Sonoff Zigbee 3.0) conectado a ese equipo.',
+      'Pulsa "Permitir Zigbee": durante 2 minutos HomeIA acepta equipos nuevos.',
+      'Pon el dispositivo en modo de emparejamiento: normalmente se mantiene presionado su botón unos 5 segundos hasta que parpadea.',
+      'Cuando aparezca en "Descubrimiento de red", pulsa "Incorporar", ponle un nombre y escribe su habitación.',
     ],
   },
   {
     id: 'SHELLY', name: 'Shelly', steps: [
-      'Conecta el Shelly a la Wi-Fi de la casa con su app o su interfaz web.',
-      'Si activaste contraseña, cárgala después en Dispositivos → Credenciales (se guarda cifrada).',
-      'Pulsa "Buscar dispositivos"; los Gen1 y Gen2/Plus/Pro se detectan por mDNS.',
-      'Incorpóralo como luz o tomacorriente; los dimmers aparecen con regulación de brillo.',
+      'Conecta el Shelly a la WiFi de tu casa con la app Shelly Smart Control.',
+      'Anota su IP: en la app, abre el dispositivo → Configuración → Información del dispositivo.',
+      'Pulsa "Buscar dispositivos". Cuando aparezca, pulsa "Incorporar" y elige si es luz o tomacorriente.',
+      'Si le pusiste contraseña al Shelly, escríbela en Dispositivos → botón de la llave (Credenciales).',
     ],
   },
   {
     id: 'TASMOTA', name: 'Tasmota', steps: [
-      'Conecta el equipo Tasmota a la Wi-Fi y anota su IP fija (reserva DHCP recomendada).',
-      'Si tiene contraseña web, cárgala en Credenciales del dispositivo.',
-      'Pulsa "Buscar dispositivos" (SSDP/mDNS) e incorpóralo.',
+      'Conecta el equipo a la WiFi de tu casa.',
+      'Anota su IP: la ves en la página web del equipo, en "Información".',
+      'Pulsa "Buscar dispositivos" y luego "Incorporar".',
+      'Si su página web tiene contraseña, escríbela en Dispositivos → botón de la llave (Credenciales).',
     ],
   },
   {
     id: 'ESPHOME', name: 'ESPHome (API nativa)', steps: [
-      'Incluye "api:" en el YAML del firmware; si usas "encryption: key", tenla a mano.',
-      'Pulsa "Buscar dispositivos": se detecta por _esphomelib._tcp.',
-      'Incorpóralo y carga la clave de cifrado en Credenciales. El Edge controla la primera luz o interruptor del firmware.',
+      'Conecta el equipo a la WiFi de tu casa.',
+      'Copia su clave de cifrado ("encryption key"): está en el panel de ESPHome, en la configuración del dispositivo.',
+      'Pulsa "Buscar dispositivos" y luego "Incorporar".',
+      'Pega la clave de cifrado en Dispositivos → botón de la llave (Credenciales).',
     ],
   },
   {
     id: 'WLED', name: 'WLED', steps: [
-      'Conecta el controlador WLED a la Wi-Fi.',
-      'Pulsa "Buscar dispositivos" (mDNS _wled._tcp) e incorpóralo como luz.',
+      'Conecta la tira o controlador WLED a la WiFi de tu casa con la app WLED.',
+      'Pulsa "Buscar dispositivos", luego "Incorporar" y elígelo como luz.',
     ],
   },
   {
     id: 'MQTT', name: 'ESP32 / MQTT HomeIA', steps: [
-      'Levanta el broker (compose.mqtt.yaml) y crea un usuario por dispositivo con su id de HomeIA (MQTT_DEVICE_USERS="<id>:clave").',
-      'Registra el dispositivo en Dispositivos y usa su id en homeia/devices/<id>/command y /state.',
+      'Registra el dispositivo en Dispositivos (como luz o tomacorriente) y escribe su habitación.',
+      'Copia el ID del dispositivo: lo ves al editarlo (botón del lápiz), con un botón para copiarlo.',
+      'En el programa del ESP32 configura ese ID, la dirección del broker MQTT y el usuario y la contraseña MQTT (te los da el administrador de HomeIA).',
+      'Cuando el ESP32 se conecte, el dispositivo aparece "En línea" en Dispositivos.',
     ],
   },
   {
     id: 'TUYA', name: 'Tuya / Smart Life', steps: [
-      'Crea un proyecto Cloud en iot.tuya.com y vincula tu cuenta Smart Life.',
-      'Define TUYA_ACCESS_ID, TUYA_ACCESS_SECRET y TUYA_REGION en el backend.',
-      'Importa los equipos desde Conexión WiFi.',
+      'Agrega el dispositivo en la app Smart Life (o Tuya Smart) con tu cuenta, como lo harías normalmente.',
+      'Entra a Conexión WiFi en HomeIA: el dispositivo aparece en la lista.',
+      'Elige si es luz o tomacorriente, escribe su habitación y pulsa "Agregar".',
+      'Si no aparece, tu cuenta Smart Life todavía no está vinculada a HomeIA: el administrador lo hace una sola vez en la plataforma de Tuya.',
     ],
   },
 ];

@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useDeferredValue, useMemo, useState } from 'react';
-import { History, KeyRound, Lightbulb, Pencil, Plug, Plus, Radio, Search, ShieldCheck, Trash2, Wifi, WifiOff } from 'lucide-react';
+import { Copy, History, KeyRound, Lightbulb, Pencil, Plug, Plus, Radio, Search, ShieldCheck, Trash2, Wifi, WifiOff } from 'lucide-react';
 import { api, ApiError } from '@/services/api';
 import { useAsync } from '@/hooks/useAsync';
 import { useAuth } from '@/contexts/AuthContext';
@@ -352,6 +352,18 @@ export default function DevicesPage() {
         <div className="modal-backdrop" onClick={() => setEditing(null)}>
           <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={saveEdit}>
             <div className="modal-title">Editar dispositivo</div>
+            {/* El ID lo piden los dispositivos propios (ESP32 por MQTT) en su programa. */}
+            <div className="field">
+              <span>ID del dispositivo</span>
+              <div>
+                <code style={{ flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis' }}>{editing.id}</code>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => {
+                  void navigator.clipboard?.writeText(editing.id).then(() => setMessage('ID copiado'), () => setMessage('No se pudo copiar el ID'));
+                }}>
+                  <Copy size={14} /> Copiar
+                </button>
+              </div>
+            </div>
             <label className="field">
               <span>Nombre</span>
               <div><input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} required /></div>
